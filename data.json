@@ -2,103 +2,128 @@
  "candidates": [
   {
    "name": "Mélenchon",
-   "bloc": "BLOC GAUCHE"
+   "bloc": "BLOC GAUCHE",
+   "subBloc": "Gauche radicale"
   },
   {
    "name": "Glucksmann",
-   "bloc": "BLOC GAUCHE"
+   "bloc": "BLOC GAUCHE",
+   "subBloc": "Gauche classique"
   },
   {
    "name": "Roussel",
-   "bloc": "BLOC GAUCHE"
+   "bloc": "BLOC GAUCHE",
+   "subBloc": "Gauche classique"
   },
   {
    "name": "Tondelier",
-   "bloc": "BLOC GAUCHE"
+   "bloc": "BLOC GAUCHE",
+   "subBloc": "Gauche classique"
   },
   {
    "name": "Hollande",
-   "bloc": "BLOC GAUCHE"
+   "bloc": "BLOC GAUCHE",
+   "subBloc": "Gauche classique"
   },
   {
    "name": "Faure",
-   "bloc": "BLOC GAUCHE"
+   "bloc": "BLOC GAUCHE",
+   "subBloc": "Gauche classique"
   },
   {
    "name": "Ruffin",
-   "bloc": "BLOC GAUCHE"
+   "bloc": "BLOC GAUCHE",
+   "subBloc": "Gauche classique"
   },
   {
    "name": "Poutou",
-   "bloc": "BLOC GAUCHE"
+   "bloc": "BLOC GAUCHE",
+   "subBloc": "Gauche radicale"
   },
   {
    "name": "Arthaud",
-   "bloc": "BLOC GAUCHE"
+   "bloc": "BLOC GAUCHE",
+   "subBloc": "Gauche radicale"
   },
   {
    "name": "de Villepin",
-   "bloc": "BLOC GAUCHE"
+   "bloc": "BLOC GAUCHE",
+   "subBloc": "Gauche classique"
   },
   {
    "name": "Philippe",
-   "bloc": "CENTRE"
+   "bloc": "CENTRE",
+   "subBloc": "Centre droit"
   },
   {
    "name": "Le Maire",
-   "bloc": "CENTRE"
+   "bloc": "CENTRE",
+   "subBloc": "Centre droit"
   },
   {
    "name": "Attal",
-   "bloc": "CENTRE"
+   "bloc": "CENTRE",
+   "subBloc": "Centre gauche"
   },
   {
    "name": "Bardella",
-   "bloc": "BLOC DROITE"
+   "bloc": "BLOC DROITE",
+   "subBloc": "Droite radicale"
   },
   {
    "name": "Le Pen",
-   "bloc": "BLOC DROITE"
+   "bloc": "BLOC DROITE",
+   "subBloc": "Droite radicale"
   },
   {
    "name": "Lasalle",
-   "bloc": "BLOC DROITE"
+   "bloc": "BLOC DROITE",
+   "subBloc": "Divers droite"
   },
   {
    "name": "Retailleau",
-   "bloc": "BLOC DROITE"
+   "bloc": "BLOC DROITE",
+   "subBloc": "Droite classique"
   },
   {
    "name": "Zemmour",
-   "bloc": "BLOC DROITE"
+   "bloc": "BLOC DROITE",
+   "subBloc": "Droite radicale"
   },
   {
    "name": "Knafo",
-   "bloc": "BLOC DROITE"
+   "bloc": "BLOC DROITE",
+   "subBloc": "Droite radicale"
   },
   {
    "name": "Asselineau",
-   "bloc": "BLOC DROITE"
+   "bloc": "BLOC DROITE",
+   "subBloc": "Droite radicale"
   },
   {
    "name": "Bertrand",
-   "bloc": "BLOC DROITE"
+   "bloc": "BLOC DROITE",
+   "subBloc": "Droite classique"
   },
   {
    "name": "Lisnard",
-   "bloc": "BLOC DROITE"
+   "bloc": "BLOC DROITE",
+   "subBloc": "Droite classique"
   },
   {
    "name": "Dupont-Aignan",
-   "bloc": "BLOC DROITE"
+   "bloc": "BLOC DROITE",
+   "subBloc": "Droite radicale"
   },
   {
    "name": "Bouamrane",
-   "bloc": "BLOC GAUCHE"
+   "bloc": "BLOC GAUCHE",
+   "subBloc": "Gauche classique"
   },
   {
    "name": "Royal",
-   "bloc": "BLOC GAUCHE"
+   "bloc": "BLOC GAUCHE",
+   "subBloc": "Gauche classique"
   }
  ],
  "polls": [

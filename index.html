@@ -163,6 +163,8 @@
   #fileStatus { font-size: 0.78rem; margin-top: 6px; }
   #fileStatus.ok { color: #1a7f37; }
   #fileStatus.err { color: #c0392b; }
+  .hint.ok { color: #1a7f37; }
+  .hint.err { color: #c0392b; }
   footer { text-align: center; color: var(--muted); font-size: 0.76rem; margin-top: 24px; }
 </style>
 </head>
@@ -218,6 +220,63 @@
         <p class="hint" style="margin-bottom:0; margin-top:4px;">Coché (recommandé) : décocher un candidat ne garde que les sondages où il est réellement absent, et recalcule les moyennes des autres dans ce scénario. Décoché : un candidat retiré disparaît juste du tableau, sans changer les moyennes des autres.</p>
       </div>
 
+
+      <div class="card">
+        <h2 style="margin-bottom:8px;">Ajouter un nouveau candidat</h2>
+        <p class="hint" style="margin-top:0;">Pour un candidat testé dans un sondage mais absent de la liste. Comme pour un sondage, le classement n'est visible par tout le monde qu'après export + dépôt de data.json sur GitHub.</p>
+        <div style="display:flex; gap:10px; align-items:flex-end;">
+          <div class="field" style="flex:1; margin-bottom:0;">
+            <label>Nom</label>
+            <input type="text" id="newCandName" placeholder="ex : Bayrou">
+          </div>
+          <div class="field" style="flex:1; margin-bottom:0;">
+            <label>Tendance politique</label>
+            <select id="newCandSubBloc">
+              <option value="Gauche radicale">Gauche radicale</option>
+              <option value="Gauche classique" selected>Gauche classique</option>
+              <option value="Centre gauche">Centre gauche</option>
+              <option value="Centre droit">Centre droit</option>
+              <option value="Droite classique">Droite classique</option>
+              <option value="Divers droite">Divers droite</option>
+              <option value="Droite radicale">Droite radicale</option>
+              <option value="Non classé">Non classé (à classer plus tard)</option>
+            </select>
+          </div>
+        </div>
+        <button class="primary" id="addCandidateBtn" style="width:100%; margin-top:10px;">Ajouter ce candidat</button>
+        <p class="hint" id="newCandStatus" style="margin-bottom:0;"></p>
+      </div>
+
+      <div class="card">
+        <h2 style="margin-bottom:8px;">Ajouter un sondage manuellement</h2>
+        <p class="hint" style="margin-top:0;">À utiliser si un sondage sort avant que Wikipédia (source des mises à jour automatiques) ne l'ait repris. Une fois ajouté ici, il n'est visible que dans <strong>votre</strong> navigateur : exportez ensuite <strong>data.json</strong> (carte ci-dessous) et déposez-le sur GitHub pour qu'il soit visible par tous les visiteurs du site. Si Wikipédia reprend ensuite le même sondage, il ne sera pas dupliqué.</p>
+        <div class="field">
+          <label>Institut</label>
+          <input type="text" id="newPollInstitut" list="institutSuggest" placeholder="ex : Ifop">
+          <datalist id="institutSuggest"></datalist>
+        </div>
+        <div class="field">
+          <label>Date du sondage (fin de terrain)</label>
+          <input type="date" id="newPollDate">
+        </div>
+        <div style="display:flex; gap:10px;">
+          <div class="field" style="flex:1;">
+            <label>Échantillon (optionnel)</label>
+            <input type="text" id="newPollSample" placeholder="ex : 1500">
+          </div>
+          <div class="field" style="flex:1;">
+            <label>Inscrits (optionnel)</label>
+            <input type="text" id="newPollRegistered" placeholder="ex : 1400">
+          </div>
+        </div>
+        <div class="field">
+          <label>Scores par candidat (laisser vide = non testé)</label>
+          <div class="score-grid" id="newPollScoreGrid"></div>
+        </div>
+        <button class="primary" id="addPollBtn" style="width:100%;">Ajouter ce sondage</button>
+        <p class="hint" id="newPollStatus" style="margin-bottom:0;"></p>
+        <div id="manualPollsList" style="margin-top:10px;"></div>
+      </div>
 
       <div class="card">
         <h2>Exporter les données à jour</h2>
@@ -640,8 +699,10 @@ let SUB_BLOC = {
   "Lasalle": "Divers droite",
   "Bouamrane": "Gauche classique"
 };
-// Candidats volontairement laissés hors de cette liste :
-// ils apparaissent dans le groupe "Non classé" tant qu'ils n'ont pas été classés manuellement.
+// Ce dictionnaire ne sert plus que de solution de repli : le classement de référence
+// vit maintenant dans data.json (champ "subBloc" de chaque candidat), ce qui permet
+// à un nouveau candidat ajouté et classé via le formulaire d'être correctement classé
+// pour TOUS les visiteurs dès que le data.json est republié — sans retoucher ce fichier.
 const SUB_BLOC_ORDER = ["Gauche radicale", "Gauche classique", "Centre gauche", "Centre droit", "Droite classique", "Divers droite", "Droite radicale"];
 const SUB_BLOC_DISPLAY_ORDER = SUB_BLOC_ORDER.concat(["Non classé"]);
 const SUB_BLOC_COLOR = {
@@ -654,9 +715,20 @@ const SUB_BLOC_COLOR = {
   "Droite radicale": "#1c3f99",
   "Non classé": "#8a8f99"
 };
+const SUB_BLOC_TO_BLOC = {
+  "Gauche radicale": "BLOC GAUCHE",
+  "Gauche classique": "BLOC GAUCHE",
+  "Centre gauche": "CENTRE",
+  "Centre droit": "CENTRE",
+  "Droite classique": "BLOC DROITE",
+  "Divers droite": "BLOC DROITE",
+  "Droite radicale": "BLOC DROITE"
+};
 
 function subBlocOf(name, bloc) {
-  return SUB_BLOC[name] || null; // null => groupe "Non classé"
+  const c = dataset.candidates.find(x => x.name === name);
+  if (c && c.subBloc) return c.subBloc; // priorité au classement présent dans data.json
+  return SUB_BLOC[name] || null; // repli sur le classement codé en dur, sinon "Non classé"
 }
 
 let ORIGINAL_CANDIDATE_NAMES;
@@ -732,6 +804,203 @@ function saveManualPolls() {
   } catch (e) {
     localStorageAvailable = false;
   }
+}
+
+// --- Ajout manuel d'un nouveau candidat (même principe : local jusqu'à republication
+// de data.json — le champ subBloc part avec le fichier, donc plus besoin de retoucher
+// ce fichier index.html pour qu'il soit bien classé chez tout le monde) -------------
+
+function handleAddCandidate() {
+  const statusEl = document.getElementById("newCandStatus");
+  statusEl.className = "hint";
+  statusEl.textContent = "";
+
+  const name = document.getElementById("newCandName").value.trim();
+  const subBloc = document.getElementById("newCandSubBloc").value;
+
+  if (!name) { statusEl.textContent = "Merci d'indiquer un nom."; statusEl.className = "hint err"; return; }
+  if (dataset.candidates.some(c => c.name.toLowerCase() === name.toLowerCase())) {
+    statusEl.textContent = "Ce candidat existe déjà dans la liste."; statusEl.className = "hint err"; return;
+  }
+
+  const bloc = SUB_BLOC_TO_BLOC[subBloc] || null;
+  const candidate = { name, bloc };
+  if (subBloc !== "Non classé") candidate.subBloc = subBloc;
+
+  dataset.candidates.push(candidate);
+  manualCandidates.push(candidate);
+  saveManualCandidates();
+  state.selectedCandidates.add(name);
+
+  document.getElementById("newCandName").value = "";
+
+  statusEl.className = "hint ok";
+  statusEl.innerHTML = `Candidat « ${name} » ajouté (${subBloc}) — visible seulement dans votre navigateur pour l'instant. Exportez data.json et déposez-le sur GitHub pour qu'il soit visible par tout le monde.`;
+
+  renderCandidateList();
+  renderNewPollScoreGrid();
+  render();
+}
+
+// --- Ajout manuel d'un sondage (visible seulement dans ce navigateur tant que
+// le data.json exporté n'a pas été redéposé sur GitHub) ---------------------
+
+function candidateSignature(scores) {
+  return Object.entries(scores)
+    .filter(([, v]) => v !== null && v !== undefined)
+    .map(([n]) => n)
+    .sort()
+    .join("|");
+}
+
+function nextHypothesisNumber() {
+  let max = 0;
+  dataset.polls.forEach(p => {
+    const m = /Hypoth[eè]se\s+(\d+)\s*:/i.exec(p.hypothese || "");
+    if (m) max = Math.max(max, parseInt(m[1], 10));
+  });
+  return max + 1;
+}
+
+function findMatchingHypothesis(scores) {
+  const sig = candidateSignature(scores);
+  if (!sig) return null;
+  const match = dataset.polls.find(p => candidateSignature(p.scores) === sig);
+  return match ? match.hypothese : null;
+}
+
+function generateHypothesisLabel(scores) {
+  const names = dataset.candidates
+    .filter(c => scores[c.name] !== null && scores[c.name] !== undefined)
+    .map(c => c.name);
+  return `Hypothèse ${nextHypothesisNumber()} : ${names.join(", ")}`;
+}
+
+function parseFrenchDateInput(value) {
+  // <input type="date"> renvoie AAAA-MM-JJ ; on convertit vers notre format M/J/AA.
+  if (!value) return null;
+  const parts = value.split("-").map(Number);
+  const [y, m, d] = parts;
+  if (!y || !m || !d) return null;
+  return `${m}/${d}/${String(y).slice(2)}`;
+}
+
+function renderNewPollScoreGrid() {
+  const grid = document.getElementById("newPollScoreGrid");
+  if (!grid) return;
+  grid.innerHTML = "";
+  dataset.candidates.forEach(c => {
+    const row = document.createElement("div");
+    row.className = "score-row";
+    row.innerHTML = `<label>${c.name}</label><input type="text" data-score-cand="${c.name}" placeholder="%">`;
+    grid.appendChild(row);
+  });
+}
+
+function renderInstitutSuggestions() {
+  const dl = document.getElementById("institutSuggest");
+  if (!dl) return;
+  const instituts = [...new Set(dataset.polls.map(p => p.institut))].sort();
+  dl.innerHTML = instituts.map(i => `<option value="${i}"></option>`).join("");
+}
+
+function renderManualPollsList() {
+  const el = document.getElementById("manualPollsList");
+  if (!el) return;
+  if (!manualPolls.length) { el.innerHTML = ""; return; }
+  el.innerHTML = `<p class="hint" style="margin-bottom:4px;"><strong>${manualPolls.length} sondage(s) ajouté(s) localement, pas encore publié(s) :</strong></p>` +
+    manualPolls.map((p, i) => `
+      <div class="analysis-row" style="background:#fff8e6;">
+        <span class="analysis-name">${p.institut} — ${p.date}</span>
+        <span class="analysis-detail">${p.hypothese}</span>
+        <button class="mini-btn" data-remove-manual="${i}" style="color:#c0392b;">retirer</button>
+      </div>`).join("");
+  el.querySelectorAll("[data-remove-manual]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const idx = parseInt(btn.getAttribute("data-remove-manual"), 10);
+      const removed = manualPolls.splice(idx, 1)[0];
+      const pos = dataset.polls.indexOf(removed);
+      if (pos !== -1) dataset.polls.splice(pos, 1);
+      saveManualPolls();
+      renderManualPollsList();
+      renderInstitutList(); renderMonthList(); render();
+    });
+  });
+}
+
+function handleAddPoll() {
+  const statusEl = document.getElementById("newPollStatus");
+  statusEl.className = "hint";
+  statusEl.textContent = "";
+
+  const institut = document.getElementById("newPollInstitut").value.trim();
+  const dateVal = document.getElementById("newPollDate").value;
+  const date = parseFrenchDateInput(dateVal);
+  const sampleRaw = document.getElementById("newPollSample").value.trim();
+  const registeredRaw = document.getElementById("newPollRegistered").value.trim();
+  const sample = sampleRaw ? parseInt(sampleRaw.replace(/[^\d]/g, ""), 10) : null;
+  const registered = registeredRaw ? parseInt(registeredRaw.replace(/[^\d]/g, ""), 10) : null;
+
+  if (!institut) { statusEl.textContent = "Merci d'indiquer l'institut."; statusEl.className = "hint err"; return; }
+  if (!date) { statusEl.textContent = "Merci d'indiquer une date valide."; statusEl.className = "hint err"; return; }
+
+  const scores = {};
+  dataset.candidates.forEach(c => { scores[c.name] = null; });
+  let any = false;
+  document.querySelectorAll('#newPollScoreGrid [data-score-cand]').forEach(inp => {
+    const name = inp.getAttribute("data-score-cand");
+    const raw = inp.value.trim().replace(",", ".").replace("%", "");
+    if (raw === "") return;
+    const val = parseFloat(raw);
+    if (!isNaN(val)) { scores[name] = val; any = true; }
+  });
+  if (!any) { statusEl.textContent = "Merci de saisir au moins un score."; statusEl.className = "hint err"; return; }
+
+  // Doublon ? (même institut + même date + mêmes candidats testés) — on évite de l'ajouter
+  // deux fois ; pour la même raison, Wikipédia sautera ce sondage s'il le reprend plus tard.
+  const sig = candidateSignature(scores);
+  const dup = dataset.polls.some(p =>
+    p.institut.toLowerCase() === institut.toLowerCase() && p.date === date && candidateSignature(p.scores) === sig
+  );
+  if (dup) { statusEl.textContent = "Ce sondage (même institut, date et candidats testés) est déjà présent."; statusEl.className = "hint err"; return; }
+
+  const blocSums = { "BLOC GAUCHE": 0, "CENTRE": 0, "BLOC DROITE": 0 };
+  const blocHas = { "BLOC GAUCHE": false, "CENTRE": false, "BLOC DROITE": false };
+  dataset.candidates.forEach(c => {
+    const v = scores[c.name];
+    if (v !== null && v !== undefined && blocSums.hasOwnProperty(c.bloc)) {
+      blocSums[c.bloc] += v; blocHas[c.bloc] = true;
+    }
+  });
+  const finalBlocSums = {};
+  Object.entries(blocSums).forEach(([b, v]) => { if (blocHas[b]) finalBlocSums[b] = Math.round(v * 100) / 100; });
+  const totalBloc = Object.values(finalBlocSums).reduce((a, b) => a + b, 0);
+
+  let hyp = findMatchingHypothesis(scores);
+  if (!hyp) hyp = generateHypothesisLabel(scores);
+
+  const poll = {
+    cle: "", hypothese: hyp, institut, date, isReal: true,
+    scores, blocSums: finalBlocSums, sample, registered: registered ?? null,
+    isManual: true
+  };
+
+  dataset.polls.push(poll);
+  manualPolls.push(poll);
+  saveManualPolls();
+
+  document.getElementById("newPollInstitut").value = "";
+  document.getElementById("newPollDate").value = "";
+  document.getElementById("newPollSample").value = "";
+  document.getElementById("newPollRegistered").value = "";
+  document.querySelectorAll('#newPollScoreGrid [data-score-cand]').forEach(inp => inp.value = "");
+
+  statusEl.className = "hint ok";
+  statusEl.innerHTML = `Sondage ajouté (${hyp}) — visible seulement dans votre navigateur pour l'instant. Cliquez sur <strong>« Exporter data.json à jour »</strong> ci-dessous puis déposez ce fichier sur GitHub pour qu'il soit visible par tout le monde.` +
+    (totalBloc > 0 && (totalBloc < 90 || totalBloc > 106) ? ` <span style="color:#a05a00;">⚠️ Le total des blocs (${totalBloc.toFixed(1)}%) semble inhabituel — vérifiez les scores saisis.</span>` : '');
+
+  renderManualPollsList();
+  renderInstitutList(); renderMonthList(); render();
 }
 
 
@@ -1641,6 +1910,8 @@ function exportUpdatedData() {
 
 document.getElementById("exportXlsxBtn").addEventListener("click", exportUpdatedXlsx);
 document.getElementById("exportHtmlBtn").addEventListener("click", exportUpdatedData);
+document.getElementById("addPollBtn").addEventListener("click", handleAddPoll);
+document.getElementById("addCandidateBtn").addEventListener("click", handleAddCandidate);
 
 async function init() {
   try {
@@ -1682,6 +1953,9 @@ REF_2022 = dataset.referenceRows.find(r => /2022/.test(r.hypothese)) || null;
   renderCandidateList();
 renderInstitutList();
 renderMonthList();
+renderNewPollScoreGrid();
+renderInstitutSuggestions();
+renderManualPollsList();
 render();
 makeCardsCollapsible();
 }

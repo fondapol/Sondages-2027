@@ -168,6 +168,47 @@
   .chip .chip-count { color: var(--muted); font-weight: 500; margin-left: 2px; }
   .chip.empty { opacity: 0.5; }
   .auto-flag { color: #a05a00; cursor: help; margin-left: 4px; font-size: 0.8rem; }
+  /* Atelier : hypothèses de retrait */
+  .ws-open-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+  dialog.ws {
+    width: min(760px, calc(100vw - 32px)); max-height: calc(100vh - 48px);
+    border: 1px solid var(--border); border-radius: 14px; padding: 0;
+    background: var(--card); color: var(--text); box-shadow: 0 20px 60px rgba(20, 30, 60, 0.25);
+  }
+  dialog.ws::backdrop { background: rgba(20, 28, 45, 0.45); }
+  .ws-head { position: sticky; top: 0; background: var(--card); border-bottom: 1px solid var(--border); padding: 16px 20px 12px; z-index: 1; }
+  .ws-title-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .ws-title-row h2 { margin: 0; }
+  .ws-close { background: none; border: none; font-size: 1.5rem; line-height: 1; color: var(--muted); cursor: pointer; padding: 2px 6px; border-radius: 6px; }
+  .ws-close:hover, .ws-close:focus-visible { color: var(--text); background: #f1f3f6; }
+  .ws-steps { display: flex; flex-wrap: wrap; gap: 6px; margin: 12px 0 0; padding: 0; list-style: none; }
+  .ws-steps li { display: flex; align-items: center; gap: 6px; font-size: 0.78rem; font-weight: 600; color: var(--muted); padding: 4px 10px 4px 4px; border-radius: 999px; background: #f4f6f9; }
+  .ws-steps li .ws-num { display: inline-grid; place-items: center; width: 20px; height: 20px; border-radius: 50%; background: var(--border); color: var(--text); font-size: 0.72rem; }
+  .ws-steps li.current { background: #eef2ff; color: var(--accent-dark); }
+  .ws-steps li.current .ws-num { background: var(--accent); color: #fff; }
+  .ws-steps li.done .ws-num { background: #cfe3d4; color: #1a7f37; }
+  .ws-body { padding: 16px 20px 20px; display: flex; flex-direction: column; gap: 14px; }
+  .ws-body p { margin: 0; }
+  .ws-context { font-size: 0.85rem; color: var(--muted); }
+  .ws-trail { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 0.8rem; }
+  .ws-trail .ws-pill { background: #fdecea; color: #a5231e; border-radius: 999px; padding: 2px 10px; font-weight: 600; }
+  .ws-table { width: 100%; border-collapse: collapse; font-size: 0.86rem; font-variant-numeric: tabular-nums; }
+  .ws-table th { text-align: left; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); padding: 6px 8px; border-bottom: 1px solid var(--border); }
+  .ws-table td { padding: 6px 8px; border-bottom: 1px solid #f0f2f5; }
+  .ws-table td.num, .ws-table th.num { text-align: right; }
+  .ws-table tr.ws-total td { font-weight: 700; border-bottom: none; }
+  .ws-note { background: #fff8e6; border: 1px solid #f3dfa6; color: #6b4a00; border-radius: 10px; padding: 10px 12px; font-size: 0.84rem; }
+  .ws-placeholder { border: 2px dashed var(--border); border-radius: 12px; padding: 16px; font-size: 0.88rem; color: var(--muted); }
+  .ws-placeholder strong { color: var(--text); }
+  .ws-choices { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 8px; }
+  .ws-choice { display: flex; align-items: center; gap: 8px; border: 1px solid var(--border); border-radius: 10px; padding: 8px 10px; cursor: pointer; font-size: 0.88rem; }
+  .ws-choice:hover { border-color: var(--accent); }
+  .ws-choice input { margin: 0; }
+  .ws-choice .ws-score { margin-left: auto; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .ws-choice.selected { border-color: var(--accent); background: #eef2ff; }
+  .ws-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; padding-top: 4px; }
+  .ws-actions .ws-left { margin-right: auto; }
+  button:disabled { opacity: 0.5; cursor: not-allowed; }
   footer { text-align: center; color: var(--muted); font-size: 0.76rem; margin-top: 24px; }
 </style>
 </head>
@@ -665,8 +706,29 @@
         <p class="hint" style="margin-top:0;">Évolution de chaque candidat coché entre le début et la fin de la période sélectionnée, avec les mêmes filtres que le reste de la page.</p>
         <div id="analysisBlock"></div>
       </div>
+
+      <div class="card">
+        <div class="ws-open-row">
+          <div style="min-width:0;">
+            <h2 style="margin-bottom:2px;">Atelier : hypothèses de retrait</h2>
+            <p class="hint" style="margin:0;">Construisez votre propre estimation, étape par étape, en retirant un ou plusieurs candidats à partir des moyennes affichées ci-dessus.</p>
+          </div>
+          <button class="primary" id="openWorkshopBtn" type="button">Ouvrir l'atelier</button>
+        </div>
+      </div>
     </div>
   </div>
+
+  <dialog class="ws" id="workshopDialog" aria-labelledby="workshopTitle">
+    <div class="ws-head">
+      <div class="ws-title-row">
+        <h2 id="workshopTitle">Atelier : hypothèses de retrait</h2>
+        <button class="ws-close" id="closeWorkshopBtn" type="button" aria-label="Fermer l'atelier">×</button>
+      </div>
+      <ol class="ws-steps" id="workshopSteps"></ol>
+    </div>
+    <div class="ws-body" id="workshopBody"></div>
+  </dialog>
 
   <footer>Tout le calcul se fait dans votre navigateur — aucune donnée n'est envoyée sur un serveur.</footer>
 </div>
@@ -1870,6 +1932,183 @@ renderManualPollsList();
 render();
 makeCardsCollapsible();
 }
+
+
+// =====================================================================
+// Atelier : hypothèses de retrait
+// Parcours étape par étape, dans une fenêtre qui ne s'ouvre qu'à la demande.
+// Point de départ : instantané des moyennes du simulateur (filtres en cours).
+// Le report des voix des candidats retirés est volontairement laissé à
+// construire : pour l'instant, leurs voix sont mises de côté (non réparties).
+// =====================================================================
+
+const WS_STEPS = ["Point de départ", "Retrait", "Report des voix", "Scénario"];
+let ws = null;
+
+const fmtPct = v => `${v.toFixed(1).replace(".", ",")} %`;
+const fmtPts = v => `${v >= 0 ? "+" : "−"}${Math.abs(v).toFixed(1).replace(".", ",")} pt`;
+const escapeHtml = t => String(t).replace(/[&<>"]/g, ch => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[ch]));
+
+function blocTagHtml(bloc) {
+  const cls = BLOC_CLASS[bloc] || "";
+  return `<span class="bloc-tag tag-${cls}">${BLOC_LABEL[bloc] || bloc || "—"}</span>`;
+}
+
+function openWorkshop() {
+  const { results, pollsUsed } = computeResults();
+  const base = results
+    .filter(r => r.moyenne !== null)
+    .map(r => ({ name: r.name, bloc: r.bloc, score: r.moyenne, n: r.n }));
+  const instituts = [...state.selectedInstituts].filter(i => dataset.polls.some(p => p.institut === i && pollPassesFilters(p))).sort();
+  ws = {
+    base,
+    period: periodTitleSuffix(),
+    pollsUsed,
+    instituts,
+    simulateMode: state.excludeUnselected,
+    withdrawn: [],   // [{ name, bloc, score }] dans l'ordre des retraits
+    step: 0,
+    pick: null,
+  };
+  renderWorkshop();
+  const dlg = document.getElementById("workshopDialog");
+  if (typeof dlg.showModal === "function") { if (!dlg.open) dlg.showModal(); } else dlg.setAttribute("open", "");
+}
+
+function closeWorkshop() {
+  const dlg = document.getElementById("workshopDialog");
+  if (typeof dlg.close === "function") dlg.close(); else dlg.removeAttribute("open");
+}
+
+function wsRemaining() {
+  const out = new Set(ws.withdrawn.map(w => w.name));
+  return ws.base.filter(c => !out.has(c.name));
+}
+
+function wsUnallocated() {
+  return ws.withdrawn.reduce((a, w) => a + w.score, 0);
+}
+
+function wsGo(step) { ws.step = step; renderWorkshop(); }
+
+function renderWorkshopSteps() {
+  const current = ws.step;
+  document.getElementById("workshopSteps").innerHTML = WS_STEPS.map((label, i) => {
+    const cls = i === current ? "current" : (i < current || (ws.withdrawn.length && i < 3) ? "done" : "");
+    return `<li class="${cls}"${i === current ? ' aria-current="step"' : ""}><span class="ws-num">${i + 1}</span>${label}</li>`;
+  }).join("");
+}
+
+function wsTrailHtml() {
+  if (!ws.withdrawn.length) return "";
+  return `<div class="ws-trail"><span class="hint" style="margin:0;">Retirés dans ce scénario :</span>${ws.withdrawn.map((w, i) => `<span class="ws-pill">${i + 1}. ${escapeHtml(w.name)}</span>`).join("")}</div>`;
+}
+
+function renderWorkshop() {
+  renderWorkshopSteps();
+  const body = document.getElementById("workshopBody");
+  const ctx = `<p class="ws-context">Base : moyennes du simulateur — <strong>${escapeHtml(ws.period)}</strong> · ${ws.pollsUsed} sondage${ws.pollsUsed > 1 ? "s" : ""} · ${ws.instituts.length ? escapeHtml(ws.instituts.join(", ")) : "aucun institut"}${ws.simulateMode ? "" : " · mode « retrait simulé » désactivé"}.</p>`;
+
+  if (ws.step === 0) {
+    if (ws.base.length < 2) {
+      body.innerHTML = ctx + `<div class="ws-note">Il faut au moins deux candidats avec une moyenne pour construire un scénario. Fermez l'atelier, élargissez la période ou cochez d'autres candidats, puis rouvrez-le.</div>
+        <div class="ws-actions"><button class="secondary" type="button" data-ws="close">Fermer</button></div>`;
+      return;
+    }
+    const total = ws.base.reduce((a, c) => a + c.score, 0);
+    const rows = ws.base.map(c => `<tr><td><strong>${escapeHtml(c.name)}</strong></td><td>${blocTagHtml(c.bloc)}</td><td class="num">${c.n}</td><td class="num">${fmtPct(c.score)}</td></tr>`).join("");
+    body.innerHTML = ctx + `
+      <p>Voici le point de départ de votre estimation : les moyennes affichées dans le simulateur au moment où vous avez ouvert l'atelier. Pour partir d'une autre base, fermez l'atelier, changez les filtres puis rouvrez-le.</p>
+      <div class="table-scroll"><table class="ws-table">
+        <thead><tr><th>Candidat</th><th>Bloc</th><th class="num">Sondages</th><th class="num">Moyenne</th></tr></thead>
+        <tbody>${rows}<tr class="ws-total"><td colspan="3">Total</td><td class="num">${fmtPct(total)}</td></tr></tbody>
+      </table></div>
+      ${Math.abs(total - 100) > 1 ? `<div class="ws-note">Ces moyennes viennent d'hypothèses différentes (tous les candidats ne sont pas testés dans chaque sondage) : leur total fait <strong>${fmtPct(total)}</strong> et non 100 %. La façon d'en tenir compte fera partie de la méthode que nous définirons.</div>` : ""}
+      <div class="ws-actions"><button class="primary" type="button" data-ws="to-withdraw">Choisir un candidat à retirer →</button></div>`;
+    return;
+  }
+
+  if (ws.step === 1) {
+    const remaining = wsRemaining();
+    const choices = remaining.map(c => `
+      <label class="ws-choice${ws.pick === c.name ? " selected" : ""}">
+        <input type="radio" name="wsPick" value="${escapeHtml(c.name)}"${ws.pick === c.name ? " checked" : ""}>
+        <span>${escapeHtml(c.name)}</span><span class="ws-score">${fmtPct(c.score)}</span>
+      </label>`).join("");
+    body.innerHTML = ctx + wsTrailHtml() + `
+      <p><strong>Quel candidat se retire ${ws.withdrawn.length ? "ensuite" : "en premier"} ?</strong></p>
+      <div class="ws-choices" role="radiogroup" aria-label="Candidat à retirer">${choices}</div>
+      <div class="ws-actions">
+        <button class="secondary ws-left" type="button" data-ws="${ws.withdrawn.length ? "to-scenario" : "to-start"}">← Retour</button>
+        <button class="primary" type="button" data-ws="confirm-withdraw"${ws.pick ? "" : " disabled"}>${ws.pick ? `Retirer ${escapeHtml(ws.pick)} →` : "Sélectionnez un candidat"}</button>
+      </div>`;
+    body.querySelectorAll('input[name="wsPick"]').forEach(inp => inp.addEventListener("change", () => { ws.pick = inp.value; renderWorkshop(); }));
+    return;
+  }
+
+  if (ws.step === 2) {
+    const last = ws.withdrawn[ws.withdrawn.length - 1];
+    body.innerHTML = ctx + wsTrailHtml() + `
+      <p><strong>${escapeHtml(last.name)}</strong> se retire : <strong>${fmtPct(last.score)}</strong> de voix à redistribuer.</p>
+      <div class="ws-placeholder">
+        <p><strong>Méthode de report des voix : à construire.</strong></p>
+        <p style="margin-top:6px;">C'est ici que se fera la répartition des voix de ${escapeHtml(last.name)} entre les candidats restants (et, le cas échéant, l'abstention). En attendant, ces voix sont mises de côté et comptées comme « non réparties » dans le scénario.</p>
+      </div>
+      <div class="ws-actions">
+        <button class="secondary ws-left" type="button" data-ws="undo">← Annuler ce retrait</button>
+        <button class="secondary" type="button" data-ws="to-withdraw">Retirer un autre candidat</button>
+        <button class="primary" type="button" data-ws="to-scenario">Voir le scénario →</button>
+      </div>`;
+    return;
+  }
+
+  // Étape 4 : scénario
+  const remaining = wsRemaining();
+  const unallocated = wsUnallocated();
+  const rows = remaining.map(c => `<tr><td><strong>${escapeHtml(c.name)}</strong></td><td>${blocTagHtml(c.bloc)}</td><td class="num">${fmtPct(c.score)}</td><td class="num">${fmtPct(c.score)}</td><td class="num">${fmtPts(0)}</td></tr>`).join("");
+  const outRows = ws.withdrawn.map(w => `<tr style="color:var(--muted);"><td><s>${escapeHtml(w.name)}</s> <span class="hint">(retiré)</span></td><td>${blocTagHtml(w.bloc)}</td><td class="num">${fmtPct(w.score)}</td><td class="num">—</td><td class="num">${fmtPts(-w.score)}</td></tr>`).join("");
+  body.innerHTML = ctx + wsTrailHtml() + `
+    <p>État de votre scénario après ${ws.withdrawn.length} retrait${ws.withdrawn.length > 1 ? "s" : ""}.</p>
+    <div class="table-scroll"><table class="ws-table">
+      <thead><tr><th>Candidat</th><th>Bloc</th><th class="num">Départ</th><th class="num">Estimation</th><th class="num">Écart</th></tr></thead>
+      <tbody>${rows}${outRows}<tr class="ws-total"><td colspan="3">Voix non réparties</td><td class="num">${fmtPct(unallocated)}</td><td></td></tr></tbody>
+    </table></div>
+    <div class="ws-note">Tant que la méthode de report n'est pas définie, les scores des candidats restants ne bougent pas : les voix des candidats retirés restent « non réparties ».</div>
+    <div class="ws-actions">
+      <button class="secondary ws-left" type="button" data-ws="reset">Recommencer</button>
+      <button class="primary" type="button" data-ws="to-withdraw"${remaining.length > 2 ? "" : " disabled"}>Retirer un autre candidat</button>
+    </div>`;
+}
+
+function handleWorkshopAction(action) {
+  if (!ws) return;
+  if (action === "close") return closeWorkshop();
+  if (action === "to-start") return wsGo(0);
+  if (action === "to-withdraw") { ws.pick = null; return wsGo(1); }
+  if (action === "to-scenario") return wsGo(3);
+  if (action === "confirm-withdraw") {
+    const c = wsRemaining().find(x => x.name === ws.pick);
+    if (!c) return;
+    ws.withdrawn.push({ name: c.name, bloc: c.bloc, score: c.score });
+    ws.pick = null;
+    return wsGo(2);
+  }
+  if (action === "undo") {
+    ws.withdrawn.pop();
+    return wsGo(ws.withdrawn.length ? 3 : 1);
+  }
+  if (action === "reset") { ws.withdrawn = []; ws.pick = null; return wsGo(0); }
+}
+
+document.getElementById("openWorkshopBtn").addEventListener("click", openWorkshop);
+document.getElementById("closeWorkshopBtn").addEventListener("click", closeWorkshop);
+document.getElementById("workshopBody").addEventListener("click", (e) => {
+  const btn = e.target.closest("[data-ws]");
+  if (btn && !btn.disabled) handleWorkshopAction(btn.getAttribute("data-ws"));
+});
+document.getElementById("workshopDialog").addEventListener("click", (e) => {
+  if (e.target.id === "workshopDialog") closeWorkshop(); // clic sur le fond
+});
 
 init();
 </script>

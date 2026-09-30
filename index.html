@@ -209,6 +209,13 @@
   .ws-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; padding-top: 4px; }
   .ws-actions .ws-left { margin-right: auto; }
   button:disabled { opacity: 0.5; cursor: not-allowed; }
+  .ws-source { border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; display: flex; flex-direction: column; gap: 6px; }
+  .ws-source-title { font-weight: 700; font-size: 0.9rem; }
+  .ws-pairs { margin: 6px 0 0; padding-left: 18px; font-size: 0.8rem; color: var(--muted); max-height: 160px; overflow: auto; }
+  .ws-input { width: 72px; padding: 4px 6px; text-align: right; border: 1px solid var(--border); border-radius: 6px; font: inherit; font-variant-numeric: tabular-nums; }
+  .ws-input:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .ws-table tr.row-qualified td { background: #eef4ff; }
+  .ws-err { color: #c0392b; margin: 0; }
   footer { text-align: center; color: var(--muted); font-size: 0.76rem; margin-top: 24px; }
 </style>
 </head>
@@ -1331,7 +1338,7 @@ function pollPassesFilters(p, opts = {}) {
   }
   const search = state.hypSearch.trim().toLowerCase();
   if (search && !p.hypothese.toLowerCase().includes(search) && !p.institut.toLowerCase().includes(search)) return false;
-  if (state.excludeUnselected) {
+  if (state.excludeUnselected && !opts.ignoreCandidates) {
     for (const c of dataset.candidates) {
       if (state.selectedCandidates.has(c.name)) continue;
       const v = p.scores[c.name];
@@ -1945,13 +1952,105 @@ makeCardsCollapsible();
 const WS_STEPS = ["Point de départ", "Retrait", "Report des voix", "Scénario"];
 let ws = null;
 
+// Sources de report : chacune propose une répartition (en % des voix du retiré) ;
+// le résultat final sera une moyenne pondérée des sources disponibles, corrigeable
+// à la main. Seule la source « sondages » est construite pour l'instant.
+const WS_SOURCES = [
+  { id: "sondages", label: "Mesure dans les sondages", ready: true },
+  { id: "reports2024", label: "Reports de voix observés (législatives 2024…)", ready: false },
+  { id: "rejet", label: "Taux de rejet des candidats", ready: false },
+  { id: "abstention", label: "Abstention estimée chez ses électeurs", ready: false },
+  { id: "proximite", label: "Proximité politique", ready: false },
+];
+
 const fmtPct = v => `${v.toFixed(1).replace(".", ",")} %`;
 const fmtPts = v => `${v >= 0 ? "+" : "−"}${Math.abs(v).toFixed(1).replace(".", ",")} pt`;
 const escapeHtml = t => String(t).replace(/[&<>"]/g, ch => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[ch]));
+const round1 = v => Math.round(v * 10) / 10;
 
 function blocTagHtml(bloc) {
   const cls = BLOC_CLASS[bloc] || "";
   return `<span class="bloc-tag tag-${cls}">${BLOC_LABEL[bloc] || bloc || "—"}</span>`;
+}
+
+// --- Source 1 : mesure dans les sondages -----------------------------------
+// Pour un candidat X, on cherche dans une même vague (même institut, même date)
+// deux hypothèses identiques à ceci près que X est présent dans l'une et absent
+// de l'autre. Le gain de chaque candidat Y entre les deux, rapporté au score de X,
+// donne la part des électeurs de X qui se reportent sur Y. On fait la moyenne sur
+// toutes les paires trouvées (instituts et période sélectionnés ; à défaut, toute
+// la période disponible pour ces instituts).
+function measurePollTransfers(X) {
+  const present = p => Object.keys(p.scores).filter(k => p.scores[k] !== null && p.scores[k] !== undefined);
+  const collect = (useMonths) => {
+    const pool = dataset.polls.filter(p => pollPassesFilters(p, { ignoreMonths: !useMonths, ignoreCandidates: true }));
+    const waves = new Map();
+    pool.forEach(p => { const k = p.institut + "|" + p.date; if (!waves.has(k)) waves.set(k, []); waves.get(k).push(p); });
+    const pairs = [];
+    waves.forEach(ps => {
+      ps.forEach(a => {
+        const A = present(a);
+        if (!A.includes(X)) return;
+        ps.forEach(b => {
+          const B = present(b);
+          if (B.length !== A.length - 1 || B.includes(X) || !B.every(n => A.includes(n))) return;
+          pairs.push({ withX: a, withoutX: b });
+        });
+      });
+    });
+    return pairs;
+  };
+  let pairs = collect(true), scope = "période sélectionnée";
+  if (!pairs.length) { pairs = collect(false); scope = "toutes périodes (aucune paire sur la période sélectionnée)"; }
+  const acc = {};
+  pairs.forEach(({ withX, withoutX }) => {
+    const x = withX.scores[X];
+    if (!x) return;
+    Object.keys(withoutX.scores).forEach(y => {
+      const after = withoutX.scores[y], before = withX.scores[y];
+      if (after === null || after === undefined || before === null || before === undefined) return;
+      (acc[y] = acc[y] || []).push(100 * (after - before) / x);
+    });
+  });
+  const shares = {};
+  Object.entries(acc).forEach(([y, v]) => { shares[y] = { mean: v.reduce((a, b) => a + b, 0) / v.length, n: v.length }; });
+  return {
+    scope, shares,
+    pairs: pairs.map(({ withX, withoutX }) => ({ institut: withX.institut, date: withX.date, x: withX.scores[X], hyp: withX.hypothese, hypWithout: withoutX.hypothese })),
+  };
+}
+
+// Pré-remplissage à partir d'une mesure : parts négatives ramenées à 0, total
+// plafonné à 100 % ; le reste va à « non réparti ».
+function prefillFromMeasure(measure, remainingNames) {
+  const out = {};
+  remainingNames.forEach(n => { const m = measure.shares[n]; out[n] = m ? Math.max(0, round1(m.mean)) : 0; });
+  const total = Object.values(out).reduce((a, b) => a + b, 0);
+  if (total > 100) Object.keys(out).forEach(n => { out[n] = round1(out[n] * 100 / total); });
+  return out;
+}
+
+// --- Calcul du scénario -----------------------------------------------------
+// Les retraits s'appliquent dans l'ordre : le score « courant » du retiré (départ +
+// voix déjà reçues) est redistribué selon le report retenu.
+function wsCompute() {
+  const scores = {};
+  ws.base.forEach(c => { scores[c.name] = c.score; });
+  let unallocated = 0;
+  const atWithdrawal = [];
+  ws.withdrawn.forEach(w => {
+    const x = scores[w.name] ?? 0;
+    atWithdrawal.push(x);
+    delete scores[w.name];
+    let given = 0;
+    Object.keys(scores).forEach(y => {
+      const pct = w.report[y] || 0;
+      scores[y] += x * pct / 100;
+      given += pct;
+    });
+    unallocated += x * Math.max(0, 100 - given) / 100;
+  });
+  return { scores, unallocated, atWithdrawal };
 }
 
 function openWorkshop() {
@@ -1960,16 +2059,7 @@ function openWorkshop() {
     .filter(r => r.moyenne !== null)
     .map(r => ({ name: r.name, bloc: r.bloc, score: r.moyenne, n: r.n }));
   const instituts = [...state.selectedInstituts].filter(i => dataset.polls.some(p => p.institut === i && pollPassesFilters(p))).sort();
-  ws = {
-    base,
-    period: periodTitleSuffix(),
-    pollsUsed,
-    instituts,
-    simulateMode: state.excludeUnselected,
-    withdrawn: [],   // [{ name, bloc, score }] dans l'ordre des retraits
-    step: 0,
-    pick: null,
-  };
+  ws = { base, period: periodTitleSuffix(), pollsUsed, instituts, simulateMode: state.excludeUnselected, withdrawn: [], step: 0, pick: null };
   renderWorkshop();
   const dlg = document.getElementById("workshopDialog");
   if (typeof dlg.showModal === "function") { if (!dlg.open) dlg.showModal(); } else dlg.setAttribute("open", "");
@@ -1985,11 +2075,7 @@ function wsRemaining() {
   return ws.base.filter(c => !out.has(c.name));
 }
 
-function wsUnallocated() {
-  return ws.withdrawn.reduce((a, w) => a + w.score, 0);
-}
-
-function wsGo(step) { ws.step = step; renderWorkshop(); }
+function wsGo(step) { ws.step = step; renderWorkshop(); document.getElementById("workshopBody").scrollTop = 0; }
 
 function renderWorkshopSteps() {
   const current = ws.step;
@@ -2002,6 +2088,79 @@ function renderWorkshopSteps() {
 function wsTrailHtml() {
   if (!ws.withdrawn.length) return "";
   return `<div class="ws-trail"><span class="hint" style="margin:0;">Retirés dans ce scénario :</span>${ws.withdrawn.map((w, i) => `<span class="ws-pill">${i + 1}. ${escapeHtml(w.name)}</span>`).join("")}</div>`;
+}
+
+function wsReportTotal(w) {
+  return Object.values(w.report).reduce((a, b) => a + (b || 0), 0);
+}
+
+function renderReportStep(body, ctx) {
+  const w = ws.withdrawn[ws.withdrawn.length - 1];
+  const { atWithdrawal } = wsCompute();
+  const x = atWithdrawal[atWithdrawal.length - 1];
+  const others = Object.keys(w.report);
+  const m = w.measure;
+  const rows = others
+    .map(n => ({ n, meas: m.shares[n] ? m.shares[n].mean : null, nb: m.shares[n] ? m.shares[n].n : 0 }))
+    .sort((a, b) => (b.meas ?? -999) - (a.meas ?? -999))
+    .map(({ n, meas, nb }) => `<tr>
+      <td><strong>${escapeHtml(n)}</strong></td>
+      <td class="num">${meas === null ? '<span class="hint">—</span>' : `${fmtPct(meas)} <span class="hint">(${nb})</span>`}</td>
+      <td class="num"><input class="ws-input" type="number" min="0" max="100" step="0.1" inputmode="decimal" id="wsr-${escapeHtml(n)}" data-report="${escapeHtml(n)}" value="${w.report[n]}" aria-label="Report vers ${escapeHtml(n)} en %"> %</td>
+      <td class="num" data-pts="${escapeHtml(n)}">${fmtPts(x * (w.report[n] || 0) / 100)}</td>
+    </tr>`).join("");
+  const total = wsReportTotal(w);
+  const pairsList = m.pairs.map(pr => `<li>${escapeHtml(pr.institut)} — ${escapeHtml(pr.date)} : ${escapeHtml(pr.hyp)} <span class="hint">(${escapeHtml(w.name)} à ${fmtPct(pr.x)})</span></li>`).join("");
+  const rawSum = others.reduce((a, n) => a + (m.shares[n] ? Math.max(0, m.shares[n].mean) : 0), 0);
+  const upcoming = WS_SOURCES.filter(src => !src.ready).map(src => `<li>${escapeHtml(src.label)}</li>`).join("");
+
+  body.innerHTML = ctx + wsTrailHtml() + `
+    <p><strong>${escapeHtml(w.name)}</strong> se retire avec <strong>${fmtPct(x)}</strong> : où vont ses électeurs ?</p>
+    <div class="ws-source">
+      <p class="ws-source-title">① ${escapeHtml(WS_SOURCES[0].label)}</p>
+      ${m.pairs.length
+        ? `<p class="hint" style="margin:0;">${m.pairs.length} comparaison${m.pairs.length > 1 ? "s" : ""} (${escapeHtml(m.scope)}) entre une hypothèse avec ${escapeHtml(w.name)} et la même hypothèse sans lui/elle, chez un même institut à la même date. Entre parenthèses : nombre de comparaisons où le candidat figure.</p>
+           ${rawSum > 100.05 ? `<p class="hint" style="margin:0;">Les mesures positives totalisent ${fmtPct(rawSum)} (écarts d'arrondis entre sondages) : le report retenu les ramène proportionnellement à 100 %.</p>` : ""}
+           <details><summary class="hint" style="cursor:pointer;">Voir les comparaisons utilisées</summary><ul class="ws-pairs">${pairsList}</ul></details>`
+        : `<p class="ws-note" style="margin:0;">Aucun sondage ne teste ${escapeHtml(w.name)} présent puis absent dans une même vague : pas de mesure disponible. Saisissez votre propre report ci-dessous ; les sources suivantes proposeront d'autres estimations.</p>`}
+    </div>
+    <div class="table-scroll"><table class="ws-table">
+      <thead><tr><th>Vers</th><th class="num">Mesure sondages</th><th class="num">Report retenu</th><th class="num">Effet</th></tr></thead>
+      <tbody>${rows}
+        <tr><td>Non réparti <span class="hint">(abstention, blanc, écarts de mesure…)</span></td><td></td><td class="num" id="wsUnalloc">${fmtPct(Math.max(0, 100 - total))}</td><td class="num" id="wsUnallocPts">${fmtPts(x * Math.max(0, 100 - total) / 100)}</td></tr>
+        <tr class="ws-total"><td>Total</td><td></td><td class="num" id="wsTotal">${fmtPct(Math.min(total, 100))}</td><td></td></tr>
+      </tbody>
+    </table></div>
+    <p class="hint ws-err" id="wsReportErr" ${total > 100.05 ? "" : "hidden"}>Le total des reports dépasse 100 % : réduisez certaines valeurs.</p>
+    <div class="ws-actions" style="justify-content:flex-start;">
+      <button class="mini-btn" type="button" data-ws="reset-report"${m.pairs.length ? "" : " disabled"}>Revenir à la mesure des sondages</button>
+    </div>
+    <div class="ws-placeholder" style="padding:12px 14px;">
+      <p><strong>Sources à venir</strong>, qui s'ajouteront à cette mesure puis seront pondérées :</p>
+      <ul style="margin:6px 0 0; padding-left:18px;">${upcoming}</ul>
+    </div>
+    <div class="ws-actions">
+      <button class="secondary ws-left" type="button" data-ws="undo">← Annuler ce retrait</button>
+      <button class="secondary" type="button" data-ws="to-withdraw" data-needs-valid>Retirer un autre candidat</button>
+      <button class="primary" type="button" data-ws="to-scenario" data-needs-valid>Voir le scénario →</button>
+    </div>`;
+
+  const refresh = () => {
+    const t = wsReportTotal(w);
+    const un = Math.max(0, 100 - t);
+    document.getElementById("wsUnalloc").textContent = fmtPct(un);
+    document.getElementById("wsUnallocPts").textContent = fmtPts(x * un / 100);
+    document.getElementById("wsTotal").textContent = fmtPct(Math.min(t, 100));
+    document.getElementById("wsReportErr").hidden = t <= 100.05;
+    body.querySelectorAll("[data-needs-valid]").forEach(b => { b.disabled = t > 100.05; });
+    others.forEach(n => { const cell = body.querySelector(`[data-pts="${CSS.escape(n)}"]`); if (cell) cell.textContent = fmtPts(x * (w.report[n] || 0) / 100); });
+  };
+  body.querySelectorAll("[data-report]").forEach(inp => inp.addEventListener("input", () => {
+    const v = parseFloat(String(inp.value).replace(",", "."));
+    w.report[inp.getAttribute("data-report")] = isNaN(v) ? 0 : Math.max(0, Math.min(100, v));
+    refresh();
+  }));
+  refresh();
 }
 
 function renderWorkshop() {
@@ -2029,11 +2188,12 @@ function renderWorkshop() {
   }
 
   if (ws.step === 1) {
+    const { scores } = wsCompute();
     const remaining = wsRemaining();
     const choices = remaining.map(c => `
       <label class="ws-choice${ws.pick === c.name ? " selected" : ""}">
         <input type="radio" name="wsPick" value="${escapeHtml(c.name)}"${ws.pick === c.name ? " checked" : ""}>
-        <span>${escapeHtml(c.name)}</span><span class="ws-score">${fmtPct(c.score)}</span>
+        <span>${escapeHtml(c.name)}</span><span class="ws-score">${fmtPct(scores[c.name])}</span>
       </label>`).join("");
     body.innerHTML = ctx + wsTrailHtml() + `
       <p><strong>Quel candidat se retire ${ws.withdrawn.length ? "ensuite" : "en premier"} ?</strong></p>
@@ -2046,36 +2206,22 @@ function renderWorkshop() {
     return;
   }
 
-  if (ws.step === 2) {
-    const last = ws.withdrawn[ws.withdrawn.length - 1];
-    body.innerHTML = ctx + wsTrailHtml() + `
-      <p><strong>${escapeHtml(last.name)}</strong> se retire : <strong>${fmtPct(last.score)}</strong> de voix à redistribuer.</p>
-      <div class="ws-placeholder">
-        <p><strong>Méthode de report des voix : à construire.</strong></p>
-        <p style="margin-top:6px;">C'est ici que se fera la répartition des voix de ${escapeHtml(last.name)} entre les candidats restants (et, le cas échéant, l'abstention). En attendant, ces voix sont mises de côté et comptées comme « non réparties » dans le scénario.</p>
-      </div>
-      <div class="ws-actions">
-        <button class="secondary ws-left" type="button" data-ws="undo">← Annuler ce retrait</button>
-        <button class="secondary" type="button" data-ws="to-withdraw">Retirer un autre candidat</button>
-        <button class="primary" type="button" data-ws="to-scenario">Voir le scénario →</button>
-      </div>`;
-    return;
-  }
+  if (ws.step === 2) return renderReportStep(body, ctx);
 
   // Étape 4 : scénario
-  const remaining = wsRemaining();
-  const unallocated = wsUnallocated();
-  const rows = remaining.map(c => `<tr><td><strong>${escapeHtml(c.name)}</strong></td><td>${blocTagHtml(c.bloc)}</td><td class="num">${fmtPct(c.score)}</td><td class="num">${fmtPct(c.score)}</td><td class="num">${fmtPts(0)}</td></tr>`).join("");
-  const outRows = ws.withdrawn.map(w => `<tr style="color:var(--muted);"><td><s>${escapeHtml(w.name)}</s> <span class="hint">(retiré)</span></td><td>${blocTagHtml(w.bloc)}</td><td class="num">${fmtPct(w.score)}</td><td class="num">—</td><td class="num">${fmtPts(-w.score)}</td></tr>`).join("");
+  const { scores, unallocated, atWithdrawal } = wsCompute();
+  const remaining = wsRemaining().map(c => ({ ...c, est: scores[c.name] })).sort((a, b) => b.est - a.est);
+  const rows = remaining.map((c, i) => `<tr${i < 2 ? ' class="row-qualified"' : ""}><td><strong>${escapeHtml(c.name)}</strong></td><td>${blocTagHtml(c.bloc)}</td><td class="num">${fmtPct(c.score)}</td><td class="num"><strong>${fmtPct(c.est)}</strong></td><td class="num">${fmtPts(c.est - c.score)}</td></tr>`).join("");
+  const outRows = ws.withdrawn.map((w, i) => `<tr style="color:var(--muted);"><td><s>${escapeHtml(w.name)}</s> <span class="hint">(retiré à ${fmtPct(atWithdrawal[i])})</span></td><td>${blocTagHtml(w.bloc)}</td><td class="num">${fmtPct(w.score)}</td><td class="num">—</td><td class="num">${fmtPts(-w.score)}</td></tr>`).join("");
   body.innerHTML = ctx + wsTrailHtml() + `
-    <p>État de votre scénario après ${ws.withdrawn.length} retrait${ws.withdrawn.length > 1 ? "s" : ""}.</p>
+    <p>Votre estimation après ${ws.withdrawn.length} retrait${ws.withdrawn.length > 1 ? "s" : ""}. Les deux premiers sont surlignés.</p>
     <div class="table-scroll"><table class="ws-table">
       <thead><tr><th>Candidat</th><th>Bloc</th><th class="num">Départ</th><th class="num">Estimation</th><th class="num">Écart</th></tr></thead>
       <tbody>${rows}${outRows}<tr class="ws-total"><td colspan="3">Voix non réparties</td><td class="num">${fmtPct(unallocated)}</td><td></td></tr></tbody>
     </table></div>
-    <div class="ws-note">Tant que la méthode de report n'est pas définie, les scores des candidats restants ne bougent pas : les voix des candidats retirés restent « non réparties ».</div>
     <div class="ws-actions">
       <button class="secondary ws-left" type="button" data-ws="reset">Recommencer</button>
+      <button class="secondary" type="button" data-ws="edit-last">← Modifier le dernier report</button>
       <button class="primary" type="button" data-ws="to-withdraw"${remaining.length > 2 ? "" : " disabled"}>Retirer un autre candidat</button>
     </div>`;
 }
@@ -2086,12 +2232,20 @@ function handleWorkshopAction(action) {
   if (action === "to-start") return wsGo(0);
   if (action === "to-withdraw") { ws.pick = null; return wsGo(1); }
   if (action === "to-scenario") return wsGo(3);
+  if (action === "edit-last") return ws.withdrawn.length ? wsGo(2) : wsGo(1);
   if (action === "confirm-withdraw") {
     const c = wsRemaining().find(x => x.name === ws.pick);
     if (!c) return;
-    ws.withdrawn.push({ name: c.name, bloc: c.bloc, score: c.score });
+    const measure = measurePollTransfers(c.name);
+    const others = wsRemaining().filter(o => o.name !== c.name).map(o => o.name);
+    ws.withdrawn.push({ name: c.name, bloc: c.bloc, score: c.score, measure, report: prefillFromMeasure(measure, others) });
     ws.pick = null;
     return wsGo(2);
+  }
+  if (action === "reset-report") {
+    const w = ws.withdrawn[ws.withdrawn.length - 1];
+    w.report = prefillFromMeasure(w.measure, Object.keys(w.report));
+    return renderWorkshop();
   }
   if (action === "undo") {
     ws.withdrawn.pop();

@@ -175,7 +175,7 @@
 <div class="wrap">
   <h1>Simulateur de moyennes — sondages présidentielle 2027</h1>
   <div id="latestPollBadge" class="latest-poll-badge" style="display:none;"></div>
-  <p class="subtitle" id="subtitleText">Décochez des candidats, filtrez par institut, par mois ou par hypothèse : les moyennes se recalculent instantanément. 80 sondage(s) et 23 candidat(s) testé(s) au total — 19 vague(s) de terrain représentant 28 147 personne(s) interrogée(s), dont 25 522 inscrite(s) sur les listes électorales.</p>
+  <p class="subtitle" id="subtitleText">Décochez des candidats, filtrez par institut, par mois ou par hypothèse : les moyennes se recalculent instantanément. 80 sondage(s) et 23 candidat(s) testé(s) au total — 19 vague(s) de terrain représentant 28 147 personne(s) interrogée(s).</p>
 
   <div class="layout">
     <div class="sticky layout-filters">
@@ -1608,13 +1608,7 @@ function render() {
   document.getElementById("subtitleText").textContent =
     `Décochez des candidats, filtrez par institut, par mois ou par hypothèse : les moyennes se recalculent instantanément. ${dataset.polls.length} sondage(s) et ${dataset.candidates.length} candidat(s) testé(s) au total` +
     (totalStats.nWaves > 0
-      ? ` — ${totalStats.nWaves} vague(s) de terrain représentant ${totalStats.totalSample.toLocaleString("fr-FR")} personne(s) interrogée(s)` +
-        (totalStats.hasRegistered > 0
-          ? `, dont ${totalStats.totalRegistered.toLocaleString("fr-FR")} inscrite(s) sur les listes électorales` +
-            (totalStats.hasRegistered < totalStats.nWaves
-              ? ` (nombre d'inscrits connu pour ${totalStats.hasRegistered} vague(s) sur ${totalStats.nWaves} seulement : les sondages récupérés automatiquement depuis Wikipédia n'indiquent que la taille de l'échantillon)`
-              : "")
-          : "") + "."
+      ? ` — ${totalStats.nWaves} vague(s) de terrain représentant ${totalStats.totalSample.toLocaleString("fr-FR")} personne(s) interrogée(s).`
       : ".");
 
   const tbody = document.getElementById("resultsBody");

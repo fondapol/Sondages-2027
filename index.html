@@ -165,6 +165,9 @@
   #fileStatus.err { color: #c0392b; }
   .hint.ok { color: #1a7f37; }
   .hint.err { color: #c0392b; }
+  .chip .chip-count { color: var(--muted); font-weight: 500; margin-left: 2px; }
+  .chip.empty { opacity: 0.5; }
+  .auto-flag { color: #a05a00; cursor: help; margin-left: 4px; font-size: 0.8rem; }
   footer { text-align: center; color: var(--muted); font-size: 0.76rem; margin-top: 24px; }
 </style>
 </head>
@@ -203,12 +206,13 @@
           </div>
         </div>
         <div class="institut-list" id="monthList"><label class="chip active"><input type="checkbox" checked=""> Mars 2026</label><label class="chip active"><input type="checkbox" checked=""> Mai 2026</label><label class="chip active"><input type="checkbox" checked=""> Juin 2026</label><label class="chip active"><input type="checkbox" checked=""> Juillet 2026</label><label class="chip active"><input type="checkbox" checked=""> Août 2026</label><label class="chip active"><input type="checkbox" checked=""> Septembre 2026</label></div>
-        <p class="hint" style="margin-bottom:0;">Décochez un mois pour l'exclure des moyennes (ex : décocher juillet et août pour ne garder que septembre).</p>
+        <p class="hint" style="margin-bottom:0;">Décochez un mois pour l'exclure de tous les résultats (moyennes, blocs, tendances, analyse). Le menu au-dessus du graphique « Tendances » règle la même période. Entre parenthèses : nombre de sondages retenus ce mois-là avec les autres filtres.</p>
       </div>
 
       <div class="card">
         <h2>Instituts</h2>
         <div class="institut-list" id="institutList"><label class="chip active"><input type="checkbox" checked=""> Elabe</label><label class="chip active"><input type="checkbox" checked=""> Ifop</label><label class="chip active"><input type="checkbox" checked=""> Ipsos</label><label class="chip active"><input type="checkbox" checked=""> Odoxa</label><label class="chip active"><input type="checkbox" checked=""> OpinionWay</label><label class="chip active"><input type="checkbox" checked=""> Toluna</label><label class="chip active"><input type="checkbox" checked=""> Verian</label></div>
+        <p class="hint" style="margin-bottom:0;">Entre parenthèses : nombre de sondages retenus avec les autres filtres (période, candidats). Un institut à 0 est grisé : le cocher ou le décocher ne change rien aux résultats.</p>
       </div>
 
       <div class="card">
@@ -295,10 +299,12 @@
         <div class="top-actions">
           <h2 style="margin:0;">Tendances</h2>
           <div class="field" style="margin:0; width:auto; display:flex; gap:8px;">
-            <select id="chartZoom" style="width:auto;">
+            <select id="chartZoom" style="width:auto;" title="Même réglage que la carte « Période » : changer l'un change l'autre.">
               <option value="all">Tout l'historique</option>
-              <option value="3m">3 derniers mois</option>
-              <option value="1m">1 dernier mois</option>
+              <option value="3">3 derniers mois</option>
+              <option value="2">2 derniers mois</option>
+              <option value="1" selected>1 dernier mois</option>
+              <option value="custom" disabled hidden>Mois sélectionnés</option>
             </select>
             <select id="chartMode" style="width:auto;">
               <option value="bloc">Vue par bloc politique</option>
@@ -306,7 +312,7 @@
             </select>
           </div>
         </div>
-        <p class="hint" style="margin-top:0;" id="chartSubHint">Moyenne mensuelle, avec les mêmes filtres (candidats, instituts, mois, hypothèses) que le tableau ci-dessus.</p>
+        <p class="hint" style="margin-top:0;" id="chartSubHint">Avec les mêmes filtres (période, candidats, instituts, mode de simulation) que le reste de la page.</p>
         <canvas id="trendChart" height="366" style="display: block; box-sizing: border-box; height: 293px; width: 800px;" width="1000"></canvas>
         <p class="hint" id="chartEmptyHint" style="display:none;">Pas assez de données pour tracer une évolution avec les filtres actuels.</p>
       </div>
@@ -315,10 +321,10 @@
           <h2 style="margin-bottom:2px;" id="blocSummaryTitle">Résumé par bloc</h2>
           <label style="display:flex; align-items:center; gap:6px; cursor:pointer; font-size:0.8rem; font-weight:600; color: var(--text);">
             <input type="checkbox" id="subdivideBloc" style="width:14px;height:14px;">
-            Détail par tendance politique (6 groupes)
+            Détail par tendance politique
           </label>
         </div>
-        <p class="hint" style="margin-top:0;">Moyenne, sondage par sondage, du score total réellement mesuré pour chaque bloc dans les hypothèses retenues (respecte vos filtres candidats/instituts/hypothèses).</p>
+        <p class="hint" style="margin-top:0;">Moyenne, sondage par sondage, du score total réellement mesuré pour chaque bloc dans les hypothèses retenues (respecte la période, les instituts, les candidats et le mode de simulation).</p>
         <div class="summary-row" id="blocSummary"><div class="summary-box bloc-gauche">
         <div class="val">32.6%</div>
         <div class="lbl">Gauche — moyenne sur 80 sondages</div>
@@ -656,8 +662,8 @@
 
       <div class="card">
         <h2 style="margin-bottom:2px;">Analyse</h2>
-        <p class="hint" style="margin-top:0;">Effet du retrait des candidats décochés sur les autres, et meilleur/pire scénario quand un seul candidat est sélectionné.</p>
-        <div id="analysisBlock"><p class="hint" style="margin-top:0;">Tous les candidats sont actuellement inclus — décochez-en un pour voir qui bénéficie de son retrait.</p></div>
+        <p class="hint" style="margin-top:0;">Évolution de chaque candidat coché entre le début et la fin de la période sélectionnée, avec les mêmes filtres que le reste de la page.</p>
+        <div id="analysisBlock"></div>
       </div>
     </div>
   </div>
@@ -1064,20 +1070,74 @@ function weekLabelOf(key) {
   return `Sem. du ${fmt(start)}`;
 }
 
-const ZOOM_DAYS = { "3m": 92, "1m": 31 };
-
-function applyZoom(polls) {
-  if (state.chartZoom === "all") return polls;
-  const dated = polls.map(p => ({ p, d: pollDateObj(p) })).filter(x => x.d);
-  if (!dated.length) return polls;
-  const maxTime = Math.max(...dated.map(x => x.d.getTime()));
-  const cutoff = new Date(maxTime);
-  cutoff.setDate(cutoff.getDate() - ZOOM_DAYS[state.chartZoom]);
-  return dated.filter(x => x.d.getTime() >= cutoff.getTime()).map(x => x.p);
-}
-
 function allMonthKeys() {
   return [...new Set(dataset.polls.map(monthKeyOf).filter(Boolean))].sort();
+}
+
+// --- Période : un seul réglage, partagé entre la carte « Période » et le menu du
+// graphique « Tendances ». Tout ce qui s'affiche (moyennes, blocs, graphique, analyse)
+// suit les mois cochés.
+
+function selectedMonthKeys() {
+  const all = allMonthKeys();
+  return [...state.selectedMonths].filter(k => all.includes(k)).sort();
+}
+
+// "all", "1", "2", "3" si la sélection correspond à un préréglage du menu, sinon "custom".
+function periodPreset() {
+  const all = allMonthKeys();
+  const sel = selectedMonthKeys();
+  if (!sel.length) return "custom";
+  if (sel.length === all.length) return "all";
+  const lastN = all.slice(-sel.length);
+  if (sel.length <= 3 && lastN.every((k, i) => k === sel[i])) return String(sel.length);
+  return "custom";
+}
+
+function monthNameLower(key) {
+  const [y, m] = key.split("-").map(Number);
+  return `${MONTH_NAMES[m - 1].toLowerCase()} ${y}`;
+}
+
+function monthRangeLabel(keys) {
+  if (!keys.length) return "";
+  if (keys.length === 1) return monthNameLower(keys[0]);
+  return `${monthNameLower(keys[0])} → ${monthNameLower(keys[keys.length - 1])}`;
+}
+
+// Ex. : "le dernier mois (septembre 2026)", "les 2 derniers mois (août 2026 → septembre 2026)".
+function periodLabel() {
+  const sel = selectedMonthKeys();
+  const preset = periodPreset();
+  if (!sel.length) return "aucune période";
+  if (preset === "all") return `tout l'historique (${monthRangeLabel(sel)})`;
+  if (preset === "1") return `le dernier mois (${monthNameLower(sel[0])})`;
+  if (preset === "2" || preset === "3") return `les ${preset} derniers mois (${monthRangeLabel(sel)})`;
+  if (sel.length === 1) return `le mois de ${monthNameLower(sel[0])}`;
+  return `les ${sel.length} mois sélectionnés (${sel.map(monthNameLower).join(", ")})`;
+}
+
+// Jusqu'à 3 mois : un point par semaine ; au-delà : un point par mois.
+function useWeeklyBuckets() {
+  return selectedMonthKeys().length <= 3;
+}
+
+function syncPeriodSelect() {
+  const sel = document.getElementById("chartZoom");
+  if (!sel) return;
+  const preset = periodPreset();
+  const customOpt = sel.querySelector('option[value="custom"]');
+  if (customOpt) {
+    customOpt.hidden = preset !== "custom";
+    customOpt.textContent = selectedMonthKeys().length ? `Mois sélectionnés (${selectedMonthKeys().length})` : "Aucun mois sélectionné";
+  }
+  sel.value = preset;
+}
+
+function applyPeriodPreset(value) {
+  const all = allMonthKeys();
+  if (value === "all") state.selectedMonths = new Set(all);
+  else if (/^\d+$/.test(value)) state.selectedMonths = new Set(all.slice(-parseInt(value, 10)));
 }
 
 // Décochés par défaut à l'ouverture, mais toujours sélectionnables manuellement.
@@ -1113,7 +1173,10 @@ function renderCandidateList() {
       const row = document.createElement("div");
       row.className = "cand-row";
       const checked = state.selectedCandidates.has(c.name) ? "checked" : "";
-      row.innerHTML = `<input type="checkbox" data-cand="${c.name}" ${checked}><label>${c.name}</label>`;
+      const flag = c.subBlocAuto
+        ? `<span class="auto-flag" title="Classement « ${sb} » deviné automatiquement lors de l'import Wikipédia (d'après les candidats voisins dans le tableau). À confirmer : corriger si besoin le champ subBloc de ce candidat dans data.json et retirer la ligne subBlocAuto.">⚠︎ à vérifier</span>`
+        : "";
+      row.innerHTML = `<input type="checkbox" data-cand="${c.name}" ${checked}><label>${c.name}${flag}</label>`;
       container.appendChild(row);
     });
   });
@@ -1145,11 +1208,15 @@ function renderInstitutList() {
   const container = document.getElementById("institutList");
   container.innerHTML = "";
   const instituts = [...new Set(dataset.polls.map(p => p.institut))].sort();
+  const counts = {};
+  dataset.polls.forEach(p => { if (pollPassesFilters(p, { ignoreInstituts: true })) counts[p.institut] = (counts[p.institut] || 0) + 1; });
   instituts.forEach(inst => {
     const active = state.selectedInstituts.has(inst);
+    const n = counts[inst] || 0;
     const chip = document.createElement("label");
-    chip.className = "chip" + (active ? " active" : "");
-    chip.innerHTML = `<input type="checkbox" ${active ? "checked" : ""}> ${inst}`;
+    chip.className = "chip" + (active ? " active" : "") + (n === 0 ? " empty" : "");
+    if (n === 0) chip.title = "Aucun sondage de cet institut ne correspond aux autres filtres (période, candidats) : le cocher ou le décocher ne change rien.";
+    chip.innerHTML = `<input type="checkbox" ${active ? "checked" : ""}> ${inst} <span class="chip-count">(${n})</span>`;
     chip.querySelector("input").addEventListener("change", (e) => {
       if (e.target.checked) state.selectedInstituts.add(inst); else state.selectedInstituts.delete(inst);
       chip.classList.toggle("active", e.target.checked);
@@ -1162,11 +1229,15 @@ function renderInstitutList() {
 function renderMonthList() {
   const container = document.getElementById("monthList");
   container.innerHTML = "";
+  const counts = {};
+  dataset.polls.forEach(p => { if (pollPassesFilters(p, { ignoreMonths: true })) { const k = monthKeyOf(p); counts[k] = (counts[k] || 0) + 1; } });
   allMonthKeys().forEach(key => {
     const active = state.selectedMonths.has(key);
+    const n = counts[key] || 0;
     const chip = document.createElement("label");
-    chip.className = "chip" + (active ? " active" : "");
-    chip.innerHTML = `<input type="checkbox" ${active ? "checked" : ""}> ${monthLabelOf(key)}`;
+    chip.className = "chip" + (active ? " active" : "") + (n === 0 ? " empty" : "");
+    if (n === 0) chip.title = "Aucun sondage de ce mois ne correspond aux autres filtres (instituts, candidats).";
+    chip.innerHTML = `<input type="checkbox" ${active ? "checked" : ""}> ${monthLabelOf(key)} <span class="chip-count">(${n})</span>`;
     chip.querySelector("input").addEventListener("change", (e) => {
       if (e.target.checked) state.selectedMonths.add(key); else state.selectedMonths.delete(key);
       chip.classList.toggle("active", e.target.checked);
@@ -1176,43 +1247,29 @@ function renderMonthList() {
   });
 }
 
-function getFilteredPolls() {
-  const search = state.hypSearch.trim().toLowerCase();
-  let pool = dataset.polls;
-  return pool.filter(p => {
-    if (p.institut && !state.selectedInstituts.has(p.institut) && dataset.polls.includes(p)) return false;
+// Filtre unique utilisé par TOUS les blocs de résultats (moyennes, résumé par bloc,
+// graphique, analyse). Les options ignoreMonths / ignoreInstituts ne servent qu'à
+// compter, sur les pastilles, combien de sondages chaque mois / institut apporterait.
+function pollPassesFilters(p, opts = {}) {
+  if (!opts.ignoreInstituts && p.institut && !state.selectedInstituts.has(p.institut)) return false;
+  if (!opts.ignoreMonths) {
     const mKey = monthKeyOf(p);
     if (mKey && !state.selectedMonths.has(mKey)) return false;
-    if (search && !p.hypothese.toLowerCase().includes(search) && !p.institut.toLowerCase().includes(search)) return false;
-    if (state.excludeUnselected) {
-      for (const c of dataset.candidates) {
-        if (state.selectedCandidates.has(c.name)) continue;
-        const v = p.scores[c.name];
-        if (v !== null && v !== undefined) return false;
-      }
+  }
+  const search = state.hypSearch.trim().toLowerCase();
+  if (search && !p.hypothese.toLowerCase().includes(search) && !p.institut.toLowerCase().includes(search)) return false;
+  if (state.excludeUnselected) {
+    for (const c of dataset.candidates) {
+      if (state.selectedCandidates.has(c.name)) continue;
+      const v = p.scores[c.name];
+      if (v !== null && v !== undefined) return false;
     }
-    return true;
-  });
+  }
+  return true;
 }
 
-function getChartPolls() {
-  // Comme getFilteredPolls(), mais SANS le filtre "Période" : le graphique de
-  // tendances doit toujours pouvoir montrer l'historique complet, même si la
-  // barre latérale est réglée sur un seul mois (ex : réglage par défaut).
-  const search = state.hypSearch.trim().toLowerCase();
-  let pool = dataset.polls;
-  return pool.filter(p => {
-    if (p.institut && !state.selectedInstituts.has(p.institut) && dataset.polls.includes(p)) return false;
-    if (search && !p.hypothese.toLowerCase().includes(search) && !p.institut.toLowerCase().includes(search)) return false;
-    if (state.excludeUnselected) {
-      for (const c of dataset.candidates) {
-        if (state.selectedCandidates.has(c.name)) continue;
-        const v = p.scores[c.name];
-        if (v !== null && v !== undefined) return false;
-      }
-    }
-    return true;
-  });
+function getFilteredPolls() {
+  return dataset.polls.filter(p => pollPassesFilters(p));
 }
 
 function computeResults() {
@@ -1290,8 +1347,8 @@ function colorForCandidate(name) {
 }
 
 function buildTimeSeries(polls) {
-  const zoomed = applyZoom(polls);
-  const useWeekly = state.chartZoom !== "all";
+  const zoomed = polls;
+  const useWeekly = useWeeklyBuckets();
   const keyFn = useWeekly ? weekKeyOf : monthKeyOf;
   const labelFn = useWeekly ? weekLabelOf : monthLabelOf;
   const buckets = [...new Set(zoomed.map(keyFn).filter(Boolean))].sort();
@@ -1357,7 +1414,7 @@ function renderChart(polls) {
   if (buckets.length < 2 || series.length === 0) {
     canvas.style.display = "none";
     emptyHint.style.display = "block";
-    emptyHint.textContent = "Pas assez de données pour tracer une évolution avec les filtres actuels" + (state.chartZoom !== "all" ? " sur cette période — essayez « Tout l'historique »." : ".");
+    emptyHint.textContent = `Pas assez de données pour tracer une évolution sur ${periodLabel()} avec les filtres actuels (il faut des sondages sur au moins deux ${useWeeklyBuckets() ? "semaines" : "mois"} différent(e)s) — essayez d'élargir la période.`;
     if (trendChartInstance) { trendChartInstance.destroy(); trendChartInstance = null; }
     return;
   }
@@ -1365,9 +1422,7 @@ function renderChart(polls) {
   emptyHint.style.display = "none";
 
   const subHint = document.getElementById("chartSubHint");
-  subHint.textContent = state.chartZoom === "all"
-    ? "Moyenne mensuelle, sur tout l'historique disponible (indépendant du filtre \"Période\" ; respecte candidats, instituts et hypothèses)."
-    : `Moyenne hebdomadaire sur ${state.chartZoom === "1m" ? "le dernier mois" : "les 3 derniers mois"} (indépendant du filtre \"Période\" ; respecte candidats, instituts et hypothèses).`;
+  subHint.textContent = `Moyenne ${useWeeklyBuckets() ? "hebdomadaire" : "mensuelle"} sur ${periodLabel()}, avec les mêmes filtres (candidats, instituts, mode de simulation) que le reste de la page.`;
 
   const datasets = series.map(s => ({
     label: s.label,
@@ -1403,63 +1458,30 @@ function renderChart(polls) {
   }
 }
 
-function getBaselinePolls() {
-  const search = state.hypSearch.trim().toLowerCase();
-  return dataset.polls.filter(p => {
-    if (p.institut && !state.selectedInstituts.has(p.institut)) return false;
-    const mKey = monthKeyOf(p);
-    if (mKey && !state.selectedMonths.has(mKey)) return false;
-    if (search && !p.hypothese.toLowerCase().includes(search) && !p.institut.toLowerCase().includes(search)) return false;
-    return true;
-  });
-}
+function renderTrendAnalysis(polls) {
+  const title = selectedMonthKeys().length ? `Tendances sur ${periodLabel()}` : "Tendances";
+  const wrap = body => `<div class="single-analysis" style="margin-top:0; padding-top:0; border-top:none;">
+    <p style="margin:0 0 6px; font-weight:700;">${title}</p>${body}</div>`;
+  const msg = t => wrap(`<p class="hint" style="margin-top:0;">${t}</p>`);
 
-function computeBaselineAverages() {
-  const polls = getBaselinePolls();
-  const out = {};
-  dataset.candidates.forEach(c => {
-    const values = polls.map(p => p.scores[c.name]).filter(v => v !== null && v !== undefined);
-    out[c.name] = values.length ? values.reduce((a,b)=>a+b,0) / values.length : null;
-  });
-  return out;
-}
+  if (!selectedMonthKeys().length) return msg("Aucun mois sélectionné — cochez au moins un mois dans la carte « Période ».");
+  const candidates = dataset.candidates.filter(c => state.selectedCandidates.has(c.name));
+  if (!candidates.length) return msg("Cochez au moins un candidat pour mesurer sa tendance.");
 
-function renderTrendSentence(polls) {
-  const zoomed = applyZoom(polls);
-  const useWeekly = state.chartZoom !== "all";
+  const useWeekly = useWeeklyBuckets();
   const keyFn = useWeekly ? weekKeyOf : monthKeyOf;
   const labelFn = useWeekly ? weekLabelOf : monthLabelOf;
-  const buckets = [...new Set(zoomed.map(keyFn).filter(Boolean))].sort();
-  if (buckets.length < 2) return '';
-  const candidates = dataset.candidates.filter(c => state.selectedCandidates.has(c.name));
-  if (!candidates.length) return '';
-
-  const computeSeries = (c) => buckets.map(bKey => {
-    const inBucket = zoomed.filter(p => keyFn(p) === bKey);
-    const vals = inBucket.map(p => p.scores[c.name]).filter(v => v !== null && v !== undefined);
-    return vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : null;
-  });
-  const periodLabel = `${labelFn(buckets[0])} → ${labelFn(buckets[buckets.length - 1])}`;
-
-  // Un seul candidat sélectionné : phrase dédiée, plus lisible qu'un classement à une ligne.
-  if (candidates.length === 1) {
-    const c = candidates[0];
-    const series = computeSeries(c);
-    const firstIdx = series.findIndex(v => v !== null);
-    let lastIdx = -1;
-    for (let i = series.length - 1; i >= 0; i--) { if (series[i] !== null) { lastIdx = i; break; } }
-    if (firstIdx === -1 || lastIdx === -1 || firstIdx === lastIdx) return '';
-    const delta = series[lastIdx] - series[firstIdx];
-    const arrow = delta > 0.3 ? '▲' : delta < -0.3 ? '▼' : '→';
-    const verb = delta > 0.3 ? 'en hausse de' : delta < -0.3 ? 'en baisse de' : 'stable, variation de';
-    return `<p class="hint" style="margin:0 0 10px; padding-bottom:10px; border-bottom:1px solid var(--border);">
-      <strong>Tendance de ${c.name}</strong> : ${arrow} ${verb} ${Math.abs(delta).toFixed(1)} pt entre ${labelFn(buckets[firstIdx])} (${series[firstIdx].toFixed(1)}%) et ${labelFn(buckets[lastIdx])} (${series[lastIdx].toFixed(1)}%).
-    </p>`;
+  const unit = useWeekly ? "semaine" : "mois";
+  const buckets = [...new Set(polls.map(keyFn).filter(Boolean))].sort();
+  if (buckets.length < 2) {
+    return msg(`Pas assez de données pour mesurer une tendance : avec les filtres actuels, les sondages retenus couvrent une seule ${unit}. Élargissez la période ou les instituts.`);
   }
 
-  // Plusieurs candidats : classement complet, avec la plus forte hausse et la plus forte
-  // baisse mises en valeur, et tous les autres candidats cochés visibles aussi (respecte
-  // les filtres instituts/mois déjà appliqués en amont via `polls`).
+  const computeSeries = (c) => buckets.map(bKey => {
+    const vals = polls.filter(p => keyFn(p) === bKey).map(p => p.scores[c.name]).filter(v => v !== null && v !== undefined);
+    return vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : null;
+  });
+
   const deltas = [];
   candidates.forEach(c => {
     const series = computeSeries(c);
@@ -1467,147 +1489,31 @@ function renderTrendSentence(polls) {
     let lastIdx = -1;
     for (let i = series.length - 1; i >= 0; i--) { if (series[i] !== null) { lastIdx = i; break; } }
     if (firstIdx === -1 || lastIdx === -1 || firstIdx === lastIdx) return;
-    deltas.push({ name: c.name, delta: series[lastIdx] - series[firstIdx], from: series[firstIdx], to: series[lastIdx] });
+    deltas.push({ name: c.name, delta: series[lastIdx] - series[firstIdx], from: series[firstIdx], to: series[lastIdx],
+      fromLabel: labelFn(buckets[firstIdx]), toLabel: labelFn(buckets[lastIdx]) });
   });
-  if (!deltas.length) return '';
+  if (!deltas.length) {
+    return msg(`Aucun candidat coché n'est mesuré sur au moins deux ${unit}s différent(e)s de la période avec les filtres actuels.`);
+  }
   deltas.sort((a, b) => b.delta - a.delta);
 
   const rows = deltas.map((d, i) => {
     let cls = 'analysis-neutral', badge = '';
-    if (i === 0 && d.delta > 0.05) { cls = 'analysis-gain'; badge = ' 🔺 plus forte hausse'; }
-    else if (i === deltas.length - 1 && d.delta < -0.05) { cls = 'analysis-loss'; badge = ' 🔻 plus forte baisse'; }
+    if (deltas.length > 1 && i === 0 && d.delta > 0.05) { cls = 'analysis-gain'; badge = ' 🔺 plus forte hausse'; }
+    else if (deltas.length > 1 && i === deltas.length - 1 && d.delta < -0.05) { cls = 'analysis-loss'; badge = ' 🔻 plus forte baisse'; }
+    else if (d.delta > 0.05) cls = 'analysis-gain';
+    else if (d.delta < -0.05) cls = 'analysis-loss';
     const sign = d.delta >= 0 ? '+' : '';
     return `<div class="analysis-row ${cls}">
       <span class="analysis-name">${d.name}${badge ? `<span class="hint">${badge}</span>` : ''}</span>
       <span class="analysis-delta">${sign}${d.delta.toFixed(1)} pt</span>
-      <span class="analysis-detail">${d.from.toFixed(1)}% → ${d.to.toFixed(1)}%</span>
+      <span class="analysis-detail">${d.from.toFixed(1)}% (${d.fromLabel}) → ${d.to.toFixed(1)}% (${d.toLabel})</span>
     </div>`;
   }).join('');
 
-  return `<div class="single-analysis" style="margin-top:0; padding-top:0; border-top:none;">
-    <p class="hint" style="margin-top:0;"><strong>Tendances</strong> (${periodLabel}) — évolution de chaque candidat coché sur la période affichée :</p>
-    <div class="analysis-list">${rows}</div>
-  </div>`;
-}
-
-function renderPotentielRanking(results) {
-  const withBoth = results
-    .filter(r => r.moyenne !== null)
-    .map(r => {
-      const rr = latestRejectionRate(r.name);
-      if (!rr) return null;
-      return { name: r.name, moyenne: r.moyenne, rejet: rr.value, potentiel: r.moyenne * (100 - rr.value) / 100 };
-    })
-    .filter(Boolean)
-    .sort((a, b) => b.potentiel - a.potentiel);
-
-  if (withBoth.length === 0) return '';
-
-  const rows = withBoth.map((c, i) => `
-    <div class="analysis-row ${i < 2 ? 'analysis-gain' : ''}">
-      <span class="analysis-name">${i + 1}. ${c.name}</span>
-      <span class="analysis-detail">moyenne ${c.moyenne.toFixed(1)}% · rejet ${c.rejet.toFixed(1)}%</span>
-      <span class="analysis-delta">potentiel ${c.potentiel.toFixed(1)}</span>
-    </div>`).join('');
-  return `<div class="single-analysis" style="margin-top:0; padding-top:0; border-top:none;">
-    <p class="hint" style="margin-top:0;"><strong>Le moins rejeté</strong> — classement par moyenne × (100 − taux de rejet) ÷ 100 : en tête, le candidat qui combine le mieux un bon score et le moins de rejet dans l'opinion :</p>
-    <p class="hint" style="margin-top:0; color:#a05a00;">⚠️ Les taux de rejet actuels sont approximés à partir du rejet du <strong>parti</strong> (pas de la personnalité elle-même), mesuré par l'enquête Ipsos-BVA/CEVIPOF du 11 septembre 2026 — à interpréter avec prudence.</p>
-    <div class="analysis-list">${rows}</div>
-  </div>`;
-}
-
-function renderRemovalAnalysis(results) {
-  const unchecked = dataset.candidates.filter(c => !state.selectedCandidates.has(c.name));
-  if (unchecked.length === 0) {
-    return '<p class="hint" style="margin-top:0;">Tous les candidats sont actuellement inclus — décochez-en un pour voir qui bénéficie de son retrait.</p>';
-  }
-  if (!state.excludeUnselected) {
-    return '<p class="hint" style="margin-top:0;">Active l\'option « Ne garder que les sondages où les candidats décochés sont absents » (carte Hypothèses) pour voir l\'effet réel de ce retrait.</p>';
-  }
-  const baseline = computeBaselineAverages();
-  const deltas = results
-    .filter(r => r.moyenne !== null && baseline[r.name] !== null && baseline[r.name] !== undefined)
-    .map(r => ({ name: r.name, delta: r.moyenne - baseline[r.name], before: baseline[r.name], after: r.moyenne }))
-    .sort((a, b) => b.delta - a.delta);
-  if (deltas.length === 0) {
-    return '<p class="hint" style="margin-top:0;">Pas assez de données communes pour comparer avec les filtres actuels.</p>';
-  }
-  const rows = deltas.map(d => {
-    const sign = d.delta > 0.05 ? "gain" : d.delta < -0.05 ? "loss" : "neutral";
-    const arrow = sign === "gain" ? "▲" : sign === "loss" ? "▼" : "•";
-    return `<div class="analysis-row analysis-${sign}">
-      <span class="analysis-name">${d.name}</span>
-      <span class="analysis-delta">${arrow} ${d.delta >= 0 ? "+" : ""}${d.delta.toFixed(2)} pt</span>
-      <span class="analysis-detail">${d.before.toFixed(1)}% → ${d.after.toFixed(1)}%</span>
-    </div>`;
-  }).join("");
-  return `<p class="hint" style="margin-top:0;">Retrait de <strong>${unchecked.map(c => c.name).join(", ")}</strong> — effet sur les moyennes des autres, comparé à un scénario où tout le monde se présente (même instituts/mois/hypothèses) :</p>
-    <div class="analysis-list">${rows}</div>`;
-}
-
-const GAUCHE_NOTABLE = ["Glucksmann", "Hollande", "Faure", "de Villepin", "Ruffin"];
-const CENTRE_NOTABLE = ["Attal", "Philippe", "Le Maire"];
-
-function gaucheConfigOf(poll) {
-  const present = GAUCHE_NOTABLE.filter(n => poll.scores[n] !== null && poll.scores[n] !== undefined);
-  if (present.length === 0) return null;
-  if (present.length === 1) return { key: "g-unique-" + present[0], label: `Candidat unique à gauche : ${present[0]}` };
-  return { key: "g-dispersion", label: `Gauche dispersée (${present.join(" + ")})` };
-}
-
-function centreConfigOf(poll) {
-  const present = CENTRE_NOTABLE.filter(n => poll.scores[n] !== null && poll.scores[n] !== undefined);
-  if (present.length === 0) return null;
-  if (present.length === 1) return { key: "c-unique-" + present[0], label: `Centre porté par ${present[0]}` };
-  return { key: "c-dispersion", label: `Centre dispersé (${present.join(" + ")})` };
-}
-
-function statsByConfig(polls, candidateName, keyFn) {
-  const byKey = {};
-  polls.forEach(p => {
-    const v = p.scores[candidateName];
-    if (v === null || v === undefined) return;
-    const g = keyFn(p);
-    if (!g) return;
-    if (!byKey[g.key]) byKey[g.key] = { label: g.label, vals: [] };
-    byKey[g.key].vals.push(v);
-  });
-  return Object.values(byKey)
-    .map(g => ({ label: g.label, n: g.vals.length, avg: g.vals.reduce((a, b) => a + b, 0) / g.vals.length }))
-    .sort((a, b) => b.avg - a.avg);
-}
-
-function renderConfigBlock(title, polls, candidateName, keyFn) {
-  const stats = statsByConfig(polls, candidateName, keyFn);
-  if (stats.length < 2) {
-    return `<div class="single-analysis"><p class="hint" style="margin-top:0;"><strong>${title}</strong> — pas assez de configurations différentes testées pour comparer.</p></div>`;
-  }
-  const best = stats[0], worst = stats[stats.length - 1];
-  const rows = stats.map(s => `<div class="analysis-row"><span class="analysis-name">${s.label}</span><span class="analysis-detail">${s.avg.toFixed(2)}% (${s.n} sondage${s.n > 1 ? "s" : ""})</span></div>`).join("");
-  return `
-    <div class="single-analysis">
-      <p class="hint" style="margin-top:0;"><strong>${title}</strong></p>
-      <div class="analysis-row analysis-gain"><span class="analysis-name">✓ Meilleure configuration</span><span class="analysis-delta">${best.label} — ${best.avg.toFixed(2)}%</span></div>
-      <div class="analysis-row analysis-loss"><span class="analysis-name">✗ Pire configuration</span><span class="analysis-delta">${worst.label} — ${worst.avg.toFixed(2)}%</span></div>
-      <details style="margin-top:8px;"><summary class="hint" style="cursor:pointer;">Voir toutes les configurations testées (${stats.length})</summary>${rows}</details>
-    </div>`;
-}
-
-function renderSingleCandidateAnalysis(polls) {
-  if (state.selectedCandidates.size !== 1) return "";
-  const name = [...state.selectedCandidates][0];
-  const cand = dataset.candidates.find(c => c.name === name);
-  if (!cand) return "";
-
-  if (cand.bloc === "BLOC GAUCHE") {
-    return renderConfigBlock(`${name} — meilleure/pire configuration selon le centre`, polls, name, centreConfigOf);
-  }
-  if (cand.bloc === "CENTRE") {
-    return renderConfigBlock(`${name} — meilleure/pire configuration selon la gauche`, polls, name, gaucheConfigOf);
-  }
-  // Droite (et autres) : les deux comparaisons
-  return renderConfigBlock(`${name} — meilleure/pire configuration selon la gauche`, polls, name, gaucheConfigOf)
-       + renderConfigBlock(`${name} — meilleure/pire configuration selon le centre`, polls, name, centreConfigOf);
+  const nPolls = polls.length;
+  return wrap(`<p class="hint" style="margin-top:0;">Écart entre la moyenne de la première et de la dernière ${unit} où chaque candidat est mesuré (${nPolls} sondage${nPolls > 1 ? "s" : ""} retenu${nPolls > 1 ? "s" : ""} avec les filtres actuels).${useWeekly ? " Sur une période courte, une semaine peut ne compter que quelques sondages : à lire avec prudence." : ""}</p>
+    <div class="analysis-list">${rows}</div>`);
 }
 
 function computeSampleStats(polls) {
@@ -1679,6 +1585,9 @@ function makeCardsCollapsible() {
 
 function render() {
   updateLatestPollBadge();
+  renderInstitutList();
+  renderMonthList();
+  syncPeriodSelect();
   const { results, pollsUsed, polls } = computeResults();
   lastResults = results;
   const maxMoy = Math.max(...results.map(r => r.moyenne || 0), 1);
@@ -1699,7 +1608,13 @@ function render() {
   document.getElementById("subtitleText").textContent =
     `Décochez des candidats, filtrez par institut, par mois ou par hypothèse : les moyennes se recalculent instantanément. ${dataset.polls.length} sondage(s) et ${dataset.candidates.length} candidat(s) testé(s) au total` +
     (totalStats.nWaves > 0
-      ? ` — ${totalStats.nWaves} vague(s) de terrain représentant ${totalStats.totalSample.toLocaleString("fr-FR")} personne(s) interrogée(s)${totalStats.hasRegistered > 0 ? `, dont ${totalStats.totalRegistered.toLocaleString("fr-FR")} inscrite(s) sur les listes électorales` : ""}.`
+      ? ` — ${totalStats.nWaves} vague(s) de terrain représentant ${totalStats.totalSample.toLocaleString("fr-FR")} personne(s) interrogée(s)` +
+        (totalStats.hasRegistered > 0
+          ? `, dont ${totalStats.totalRegistered.toLocaleString("fr-FR")} inscrite(s) sur les listes électorales` +
+            (totalStats.hasRegistered < totalStats.nWaves
+              ? ` (nombre d'inscrits connu pour ${totalStats.hasRegistered} vague(s) sur ${totalStats.nWaves} seulement : les sondages récupérés automatiquement depuis Wikipédia n'indiquent que la taille de l'échantillon)`
+              : "")
+          : "") + "."
       : ".");
 
   const tbody = document.getElementById("resultsBody");
@@ -1780,12 +1695,9 @@ function render() {
     }
   }
 
-  document.getElementById("analysisBlock").innerHTML =
-    renderTrendSentence(getChartPolls()) +
-    renderPotentielRanking(results) +
-    renderRemovalAnalysis(results) + renderSingleCandidateAnalysis(getBaselinePolls());
+  document.getElementById("analysisBlock").innerHTML = renderTrendAnalysis(polls);
 
-  renderChart(getChartPolls());
+  renderChart(polls);
 }
 
 document.getElementById("selAll").addEventListener("click", () => {
@@ -1813,7 +1725,7 @@ document.getElementById("chartMode").addEventListener("change", (e) => {
   render();
 });
 document.getElementById("chartZoom").addEventListener("change", (e) => {
-  state.chartZoom = e.target.value;
+  applyPeriodPreset(e.target.value);
   render();
 });
 document.getElementById("subdivideBloc").addEventListener("change", (e) => {
@@ -1946,7 +1858,6 @@ REF_2022 = dataset.referenceRows.find(r => /2022/.test(r.hypothese)) || null;
   hypSearch: "",
   excludeUnselected: true,
   chartMode: "bloc",
-  chartZoom: "all",
   subdivideBloc: false
 };
 

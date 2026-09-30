@@ -15,7 +15,9 @@ IMPORTANT — limites connues (à lire avant de faire confiance à ce script) :
 - Les noms de candidats sur Wikipédia sont différents des nôtres (ex. "Marine Le Pen"
   vs "Le Pen"). Le dictionnaire NAME_MAP fait la correspondance ; tout nom absent de
   ce dictionnaire déclenche désormais la création automatique du candidat (nom court
-  dérivé + bloc politique deviné via ses voisins de colonne).
+  dérivé + bloc politique ET tendance (subBloc) devinés via ses voisins de colonne,
+  marqués "subBlocAuto": true pour être vérifiés — l'outil les signale « à vérifier »
+  et la Pull Request automatique les liste).
 - Wikipédia ne donne pas de nom à chaque hypothèse (contrairement à l'Excel d'origine).
   Ce script en génère un automatiquement, avec la même logique que le bouton "Ajouter
   un sondage" de l'outil (reconnaissance par signature de candidats testés).
@@ -28,6 +30,7 @@ suivante réessaiera automatiquement le lendemain.
 """
 
 import json
+import os
 import re
 import sys
 from datetime import datetime
@@ -80,28 +83,82 @@ def derive_short_name(full_name):
     return " ".join(surname_parts)
 
 
-def infer_bloc_from_neighbors(col_index, ordered_names, candidates_by_name):
-    left_bloc = None
+# Tendance par défaut quand aucun voisin du même bloc n'a de tendance connue.
+DEFAULT_SUBBLOC = {
+    "BLOC GAUCHE": "Gauche classique",
+    "CENTRE": "Centre droit",
+    "BLOC DROITE": "Droite classique",
+}
+
+
+def infer_classification(col_index, ordered_names, candidates_by_name):
+    """Devine bloc + tendance (subBloc) d'un nouveau candidat à partir des colonnes
+    voisines du tableau Wikipédia (classées de gauche à droite de l'échiquier).
+    Renvoie (bloc, subBloc, confiant)."""
+    left = None
     for j in range(col_index - 1, -1, -1):
         nm = ordered_names[j]
         if nm in candidates_by_name:
-            left_bloc = candidates_by_name[nm]["bloc"]
+            left = candidates_by_name[nm]
             break
-    right_bloc = None
+    right = None
     for j in range(col_index + 1, len(ordered_names)):
         nm = ordered_names[j]
         if nm in candidates_by_name:
-            right_bloc = candidates_by_name[nm]["bloc"]
+            right = candidates_by_name[nm]
             break
+    left_bloc = left["bloc"] if left else None
+    right_bloc = right["bloc"] if right else None
+
     if left_bloc and left_bloc == right_bloc:
-        return left_bloc, True
-    if left_bloc and not right_bloc:
-        return left_bloc, True
-    if right_bloc and not left_bloc:
-        return right_bloc, True
-    if left_bloc and right_bloc:
-        return left_bloc, False
-    return "CENTRE", False
+        bloc, confident = left_bloc, True
+    elif left_bloc and not right_bloc:
+        bloc, confident = left_bloc, True
+    elif right_bloc and not left_bloc:
+        bloc, confident = right_bloc, True
+    elif left_bloc and right_bloc:
+        bloc, confident = left_bloc, False
+    else:
+        bloc, confident = "CENTRE", False
+
+    sub_left = left.get("subBloc") if left and left.get("bloc") == bloc else None
+    sub_right = right.get("subBloc") if right and right.get("bloc") == bloc else None
+    if sub_left and sub_right and sub_left != sub_right:
+        confident = False
+    sub_bloc = sub_left or sub_right
+    if not sub_bloc:
+        sub_bloc = DEFAULT_SUBBLOC.get(bloc, "Centre droit")
+        confident = False
+    return bloc, sub_bloc, confident
+
+
+def write_pr_notes(newly_created, known_candidates):
+    """Écrit un résumé Markdown (candidats créés / à vérifier) dans le fichier indiqué
+    par PR_NOTES_FILE, repris dans la description de la Pull Request automatique."""
+    path = os.environ.get("PR_NOTES_FILE")
+    if not path:
+        return
+    lines = []
+    if newly_created:
+        lines.append("### 🆕 Nouveaux candidats créés automatiquement — classement à vérifier")
+        lines.append("")
+        lines.append("| Nom Wikipédia | Nom dans l'outil | Bloc deviné | Tendance devinée | Confiance |")
+        lines.append("|---|---|---|---|---|")
+        for wiki_name, name, bloc, sub_bloc, confident in newly_created:
+            lines.append(f"| {wiki_name} | {name} | {bloc} | {sub_bloc} | {'voisins concordants' if confident else '⚠️ incertaine'} |")
+        lines.append("")
+    pending = [c for c in known_candidates if c.get("subBlocAuto")]
+    if pending:
+        lines.append("### ⚠️ Candidats dont le classement n'a pas encore été confirmé")
+        lines.append("")
+        lines.append(", ".join(f"**{c['name']}** ({c.get('subBloc')})" for c in pending))
+        lines.append("")
+        lines.append("Pour confirmer ou corriger : dans `data.json`, ajuster le champ `subBloc` du candidat "
+                     "(Gauche radicale, Gauche classique, Centre gauche, Centre droit, Droite classique, "
+                     "Divers droite, Droite radicale) et supprimer la ligne `\"subBlocAuto\": true`.")
+        lines.append("")
+    with open(path, "w", encoding="utf-8") as f:
+        f.write("\n".join(lines))
 
 
 BLOC_OF = {}
@@ -280,19 +337,19 @@ def main():
         name = resolved_names[idx]
         if name in candidates_by_name:
             continue
-        bloc, confident = infer_bloc_from_neighbors(idx, resolved_names, candidates_by_name)
-        new_candidate = {"name": name, "bloc": bloc}
+        bloc, sub_bloc, confident = infer_classification(idx, resolved_names, candidates_by_name)
+        new_candidate = {"name": name, "bloc": bloc, "subBloc": sub_bloc, "subBlocAuto": True}
         known_candidates.append(new_candidate)
         candidates_by_name[name] = new_candidate
-        newly_created.append((col.strip(), name, bloc, confident))
+        newly_created.append((col.strip(), name, bloc, sub_bloc, confident))
 
     known_names = {c["name"] for c in known_candidates}
 
     if newly_created:
         print(f"[info] {len(newly_created)} nouveau(x) candidat(s) créé(s) automatiquement :")
-        for wiki_name, name, bloc, confident in newly_created:
-            flag = "" if confident else " ⚠️ bloc incertain, à vérifier/reclasser dans l'outil"
-            print(f"  - {wiki_name} -> {name} ({bloc}){flag}")
+        for wiki_name, name, bloc, sub_bloc, confident in newly_created:
+            flag = "" if confident else " ⚠️ classement incertain"
+            print(f"  - {wiki_name} -> {name} ({bloc} / {sub_bloc}){flag} — à vérifier")
 
     new_polls = []
     current_institut, current_date, current_sample = None, None, None
@@ -362,6 +419,8 @@ def main():
             "registered": None,
             "source": "wikipedia-auto",
         })
+
+    write_pr_notes(newly_created, known_candidates)
 
     if not new_polls and not newly_created:
         print("Aucun nouveau sondage détecté.")

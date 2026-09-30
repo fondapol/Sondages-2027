@@ -5358,6 +5358,50 @@
    "sample": 1943,
    "registered": null,
    "source": "wikipedia-auto"
+  },
+  {
+   "cle": "",
+   "hypothese": "Hypothèse 14 : Philippe (centre uni), Glucksmann, Villepin",
+   "institut": "Cluster17",
+   "date": "7/24/26",
+   "isReal": true,
+   "scores": {
+    "Mélenchon": 18.2,
+    "Glucksmann": 10.2,
+    "Roussel": 2.0,
+    "Tondelier": 2.8,
+    "Hollande": null,
+    "Faure": null,
+    "Ruffin": null,
+    "Poutou": null,
+    "Arthaud": 0.9,
+    "de Villepin": 2.9,
+    "Philippe": 18.1,
+    "Le Maire": null,
+    "Attal": null,
+    "Bardella": null,
+    "Le Pen": 30.1,
+    "Lasalle": null,
+    "Retailleau": 7.8,
+    "Zemmour": 3.8,
+    "Knafo": null,
+    "Asselineau": null,
+    "Bertrand": null,
+    "Lisnard": null,
+    "Dupont-Aignan": 3.2,
+    "Bouamrane": null,
+    "Royal": null,
+    "Maurel": null,
+    "Guedj": null
+   },
+   "blocSums": {
+    "BLOC GAUCHE": 37.0,
+    "CENTRE": 18.1,
+    "BLOC DROITE": 44.9
+   },
+   "sample": 1506,
+   "registered": 1404,
+   "source": "ajout-manuel (notice Commission des sondages n°10246, Le Grand Continent)"
   }
  ],
  "referenceRows": [

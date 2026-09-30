@@ -350,7 +350,7 @@
       </div>
       <div class="card">
         <div class="top-actions">
-          <h2 style="margin:0;">Moyennes par candidat</h2>
+          <h2 style="margin:0;" id="candidateAveragesTitle">Moyennes par candidat</h2>
           <button class="secondary" id="exportBtn">Exporter en CSV</button>
         </div>
         <div class="table-scroll">
@@ -1117,6 +1117,17 @@ function periodLabel() {
   return `les ${sel.length} mois sélectionnés (${sel.map(monthNameLower).join(", ")})`;
 }
 
+// Suffixe court pour les titres de cartes : "Septembre 2026", "2 derniers mois (août 2026 → septembre 2026)"…
+function periodTitleSuffix() {
+  const sel = selectedMonthKeys();
+  const preset = periodPreset();
+  if (!sel.length) return "aucun mois sélectionné";
+  if (sel.length === 1) return monthLabelOf(sel[0]);
+  if (preset === "all") return `tout l'historique (${monthRangeLabel(sel)})`;
+  if (preset === "2" || preset === "3") return `${preset} derniers mois (${monthRangeLabel(sel)})`;
+  return `${sel.length} mois sélectionnés`;
+}
+
 // Jusqu'à 3 mois : un point par semaine ; au-delà : un point par mois.
 function useWeeklyBuckets() {
   return selectedMonthKeys().length <= 3;
@@ -1592,17 +1603,12 @@ function render() {
   lastResults = results;
   const maxMoy = Math.max(...results.map(r => r.moyenne || 0), 1);
 
+  // Même indication de période dans les titres « Résumé par bloc » et « Moyennes par candidat ».
+  const suffix = periodTitleSuffix();
   const blocTitleEl = document.getElementById("blocSummaryTitle");
-  if (blocTitleEl) {
-    const activeMonths = [...state.selectedMonths].sort();
-    if (activeMonths.length === 1) {
-      blocTitleEl.textContent = `Résumé par bloc — ${monthLabelOf(activeMonths[0])}`;
-    } else if (activeMonths.length === allMonthKeys().length) {
-      blocTitleEl.textContent = "Résumé par bloc — tout l'historique";
-    } else {
-      blocTitleEl.textContent = `Résumé par bloc — ${activeMonths.length} mois sélectionnés`;
-    }
-  }
+  if (blocTitleEl) blocTitleEl.textContent = `Résumé par bloc — ${suffix}`;
+  const candTitleEl = document.getElementById("candidateAveragesTitle");
+  if (candTitleEl) candTitleEl.textContent = `Moyennes par candidat — ${suffix}`;
 
   const totalStats = computeSampleStats(dataset.polls);
   document.getElementById("subtitleText").textContent =

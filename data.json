@@ -127,11 +127,13 @@
   },
   {
    "name": "Maurel",
-   "bloc": "BLOC GAUCHE"
+   "bloc": "BLOC GAUCHE",
+   "subBloc": "Gauche classique"
   },
   {
    "name": "Guedj",
-   "bloc": "BLOC GAUCHE"
+   "bloc": "BLOC GAUCHE",
+   "subBloc": "Gauche classique"
   }
  ],
  "polls": [

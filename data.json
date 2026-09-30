@@ -5402,6 +5402,50 @@
    "sample": 1506,
    "registered": 1404,
    "source": "ajout-manuel (notice Commission des sondages n°10246, Le Grand Continent)"
+  },
+  {
+   "cle": "",
+   "hypothese": "Hypothèse 12 : Tondelier, Glucksmann, Attal, Le Pen",
+   "institut": "Cluster17",
+   "date": "7/24/26",
+   "isReal": true,
+   "scores": {
+    "Mélenchon": 18.3,
+    "Glucksmann": 10.3,
+    "Roussel": 1.8,
+    "Tondelier": 3.1,
+    "Hollande": null,
+    "Faure": null,
+    "Ruffin": null,
+    "Poutou": null,
+    "Arthaud": 1.0,
+    "de Villepin": 3.9,
+    "Philippe": null,
+    "Le Maire": null,
+    "Attal": 13.8,
+    "Bardella": null,
+    "Le Pen": 29.9,
+    "Lasalle": null,
+    "Retailleau": 9.7,
+    "Zemmour": 4.2,
+    "Knafo": null,
+    "Asselineau": null,
+    "Bertrand": null,
+    "Lisnard": null,
+    "Dupont-Aignan": 4.0,
+    "Bouamrane": null,
+    "Royal": null,
+    "Maurel": null,
+    "Guedj": null
+   },
+   "blocSums": {
+    "BLOC GAUCHE": 38.4,
+    "CENTRE": 13.8,
+    "BLOC DROITE": 47.8
+   },
+   "sample": 1506,
+   "registered": 1404,
+   "source": "ajout-manuel (notice Commission des sondages n°10246, Le Grand Continent)"
   }
  ],
  "referenceRows": [

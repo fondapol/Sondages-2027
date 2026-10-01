@@ -1970,7 +1970,7 @@ const WS_STEPS = [
   { key: "sondages", label: "Sondages 2026" },
   { key: "rejet", label: "Rejets 2026" },
   { key: "reports", label: "Reports 2024" },
-  { key: "proximite", label: "Proximité", soon: true },
+  { key: "proximite", label: "Proximité" },
   { key: "ponderation", label: "Pondération" },
   { key: "scenario", label: "Scénario" },
 ];
@@ -2086,7 +2086,7 @@ const WS_WEIGHT_ROWS = [
   { id: "sondages", label: "Sondages 2026" },
   { id: "rejet", label: "Rejets 2026" },
   { id: "reports", label: "Reports 2024" },
-  { id: "proximite", label: "Proximité", soon: true },
+  { id: "proximite", label: "Proximité" },
 ];
 
 function wsSources(w) {
@@ -2094,6 +2094,7 @@ function wsSources(w) {
   if (w.sondages.status === "period" || w.sondages.status === "latest") src.push({ id: "sondages", label: "Sondages 2026", proposal: w.sondages.proposal, covers: n => true });
   if (w.rejet && w.rejet.available) src.push({ id: "rejet", label: "Rejets 2026", proposal: w.rejet.proposal, covers: n => n in w.rejet.proposal });
   if (w.reports && w.reports.available) src.push({ id: "reports", label: "Reports 2024", proposal: w.reports.proposal, covers: n => true });
+  if (w.prox && w.prox.available) src.push({ id: "proximite", label: "Proximité", proposal: w.prox.proposal, covers: n => true });
   src.forEach(s => { s.weight = ws.weights[s.id] ?? 0; });
   return src;
 }
@@ -2102,10 +2103,15 @@ function wsSources(w) {
 function weightedProposal(w) {
   const src = wsSources(w);
   const out = {};
+  const prox = src.find(s => s.id === "proximite");
+  w.filledByProx = [];
   w.others.forEach(n => {
     const cov = src.filter(s => s.covers(n) && s.weight > 0);
     const tw = cov.reduce((a, s) => a + s.weight, 0);
-    out[n] = tw ? round1(cov.reduce((a, s) => a + (s.proposal[n] || 0) * s.weight, 0) / tw) : 0;
+    if (tw) out[n] = round1(cov.reduce((a, s) => a + (s.proposal[n] || 0) * s.weight, 0) / tw);
+    // Filet de sécurité : candidat couvert par aucune autre étape -> valeur de la Proximité.
+    else if (prox) { out[n] = prox.proposal[n] || 0; if (out[n] > 0) w.filledByProx.push(n); }
+    else out[n] = 0;
   });
   const total = Object.values(out).reduce((a, b) => a + b, 0);
   if (total > 100) Object.keys(out).forEach(n => { out[n] = round1(out[n] * 100 / total); });
@@ -2251,6 +2257,36 @@ function computeReports(w) {
   r.available = Object.values(r.proposal).some(v => v > 0);
 }
 
+// --- Source « Proximité » ------------------------------------------------------
+// Distance entre tendances politiques sur l'axe gauche-droite de l'outil (SUB_BLOC_ORDER) ;
+// chaque candidat restant reçoit une part proportionnelle à coefficient(distance) × son score.
+const PROX_DEFAULT_COEFS = [100, 40, 15, 5, 1]; // même tendance, 1 cran, 2 crans, 3 crans, 4 crans et plus
+const PROX_LABELS = ["Même tendance", "Tendance voisine (1 cran)", "2 crans", "3 crans", "4 crans et plus"];
+
+function proxDistance(a, b) {
+  const ia = SUB_BLOC_ORDER.indexOf(a), ib = SUB_BLOC_ORDER.indexOf(b);
+  if (ia < 0 || ib < 0) return null;
+  return Math.min(Math.abs(ia - ib), PROX_DEFAULT_COEFS.length - 1);
+}
+
+function computeProx(w) {
+  const p = w.prox;
+  p.proposal = {}; p.dist = {}; p.available = false;
+  const sbX = subBlocOf(w.name, w.bloc);
+  if (SUB_BLOC_ORDER.indexOf(sbX) < 0) return;
+  const { scores } = wsCompute(ws.withdrawn.indexOf(w));
+  const raw = {};
+  w.others.forEach(n => {
+    const d = proxDistance(sbX, subBlocOf(n, (dataset.candidates.find(c => c.name === n) || {}).bloc));
+    p.dist[n] = d;
+    raw[n] = d === null ? 0 : (p.coefs[d] || 0) * (scores[n] || 0);
+  });
+  const total = Object.values(raw).reduce((a, b) => a + b, 0);
+  w.others.forEach(n => { p.proposal[n] = total > 0 ? round1(100 * raw[n] / total) : 0; });
+  capAt100(p.proposal);
+  p.available = total > 0;
+}
+
 // --- Calcul du scénario -----------------------------------------------------
 // upTo : n'applique que les n premiers retraits (scores juste avant le retrait suivant).
 function wsCompute(upTo) {
@@ -2323,10 +2359,11 @@ function renderWorkshopSteps() {
   const sondagesSkipped = last && ["none", "declined"].includes(last.sondages.status) && cur >= order.indexOf("sondages");
   const rejetSkipped = last && last.rejet && last.rejet.skipped && cur > order.indexOf("rejet");
   const reportsSkipped = last && last.reports && !last.reports.elec && cur >= order.indexOf("reports");
+  const proxSkipped = last && last.prox && SUB_BLOC_ORDER.indexOf(subBlocOf(last.name, last.bloc)) < 0 && cur >= order.indexOf("proximite");
   document.getElementById("workshopSteps").innerHTML = WS_STEPS.map((st, i) => {
     let cls = i === cur ? "current" : i < cur ? "done" : "";
     if (st.soon) cls = "soon";
-    const isSkipped = (st.key === "sondages" && sondagesSkipped) || (st.key === "rejet" && rejetSkipped) || (st.key === "reports" && reportsSkipped);
+    const isSkipped = (st.key === "sondages" && sondagesSkipped) || (st.key === "rejet" && rejetSkipped) || (st.key === "reports" && reportsSkipped) || (st.key === "proximite" && proxSkipped);
     if (isSkipped && i !== cur) cls = "skipped";
     const extra = st.soon ? ' <span class="ws-soon">(à venir)</span>' : isSkipped ? ' <span class="ws-soon">(non prise en compte)</span>' : "";
     return `<li class="${cls}"${i === cur ? ' aria-current="step"' : ""}><span class="ws-num">${i + 1}</span>${st.label}${extra}</li>`;
@@ -2560,7 +2597,7 @@ function renderReports(body) {
   const elecOpts = `<option value="">— aucun —</option>` + Object.entries(REPORTS_DUELS).map(([k, v]) => `<option value="${k}"${k === r.elec ? " selected" : ""}>${escapeHtml(v.label)}</option>`).join("");
   const nav = `<div class="ws-actions">
       <button class="secondary ws-left" type="button" data-ws="back-from-reports">← Retour</button>
-      <button class="primary" type="button" data-ws="to-ponderation" data-needs-valid>Étape suivante →</button>
+      <button class="primary" type="button" data-ws="to-proximite" data-needs-valid>Étape suivante →</button>
     </div>`;
   if (!r.elec) {
     body.innerHTML = head + `
@@ -2605,6 +2642,46 @@ function renderReports(body) {
   bindReportInputs(body, r.proposal, x, () => { w.reportEdited = false; r.available = Object.values(r.proposal).some(v => v > 0); });
 }
 
+function renderProximite(body) {
+  const w = wsLast();
+  const p = w.prox;
+  const x = wsCompute().atWithdrawal[ws.withdrawn.length - 1];
+  const sbX = subBlocOf(w.name, w.bloc);
+  const nav = `<div class="ws-actions">
+      <button class="secondary ws-left" type="button" data-ws="back-from-proximite">← Retour</button>
+      <button class="primary" type="button" data-ws="to-ponderation" data-needs-valid>Étape suivante →</button>
+    </div>`;
+  const head = wsCtx() + wsTrailHtml() + `<p><strong>${escapeHtml(w.name)}</strong> (${fmtPct(x)}, ${escapeHtml(sbX || "non classé")}) : vers quels candidats proches ses électeurs iraient-ils ?</p>`;
+  if (SUB_BLOC_ORDER.indexOf(sbX) < 0) {
+    body.innerHTML = head + `<div class="ws-question"><p><strong>${escapeHtml(w.name)} n'est classé dans aucune tendance politique.</strong> La proximité ne peut pas être calculée : cette étape n'est pas prise en compte pour ce retrait.</p></div>` + nav;
+    return;
+  }
+  const coefRows = PROX_LABELS.map((lab, d) => `<tr><td>${escapeHtml(lab)}</td><td class="num"><input class="ws-input" type="number" min="0" max="100" step="1" data-coef="${d}" id="wsProxCoef${d}" value="${p.coefs[d]}" aria-label="Coefficient : ${escapeHtml(lab)}"></td></tr>`).join("");
+  const sbOf = n => subBlocOf(n, (dataset.candidates.find(c => c.name === n) || {}).bloc);
+  body.innerHTML = head + `
+    <div class="ws-source">
+      <p class="ws-source-title">Proximité politique</p>
+      <p class="hint" style="margin:0;">Les tendances sont rangées de gauche à droite : ${SUB_BLOC_ORDER.map(escapeHtml).join(" → ")}. Chaque candidat restant reçoit une part proportionnelle au <strong>coefficient de proximité</strong> de sa tendance avec celle ${escapeHtml(deName(w.name))}, multiplié par <strong>son score</strong> (à proximité égale, un candidat plus fort attire davantage).</p>
+      <p class="hint" style="margin:0;">Cette étape couvre tous les candidats. Avec un poids de 0 à la pondération, elle sert uniquement à compléter ceux qu'aucune autre étape ne couvre.</p>
+      <div class="table-scroll"><table class="ws-table" style="max-width:420px;">
+        <thead><tr><th>Distance entre tendances</th><th class="num">Coefficient</th></tr></thead>
+        <tbody>${coefRows}</tbody>
+      </table></div>
+    </div>
+    ${reportTableHtml(w, p.proposal, [
+      { title: "Tendance", cell: n => `<span class="hint">${escapeHtml(sbOf(n) || "non classé")}</span>` },
+      { title: "Distance", cell: n => p.dist[n] === null || p.dist[n] === undefined ? null : String(p.dist[n]) },
+    ], x, "Proposition")}
+    <div class="ws-actions" style="justify-content:flex-start;"><button class="mini-btn" type="button" data-ws="prox-reset">Revenir au calcul</button></div>
+    ${nav}`;
+  body.querySelectorAll("[data-coef]").forEach(inp => inp.addEventListener("change", () => {
+    const v = parseFloat(inp.value);
+    p.coefs[+inp.getAttribute("data-coef")] = isNaN(v) ? 0 : Math.max(0, Math.min(100, v));
+    computeProx(w); w.reportEdited = false; renderWorkshop();
+  }));
+  bindReportInputs(body, p.proposal, x, () => { w.reportEdited = false; p.available = Object.values(p.proposal).some(v => v > 0); });
+}
+
 function renderPonderation(body) {
   const w = wsLast();
   const x = wsCompute().atWithdrawal[ws.withdrawn.length - 1];
@@ -2618,7 +2695,8 @@ function renderPonderation(body) {
   const weightRows = WS_WEIGHT_ROWS.map(rw => {
     const on = avail.has(rw.id);
     const status = rw.soon ? '<span class="hint">à venir</span>' : on ? "disponible" : '<span class="hint">passée pour ce retrait</span>';
-    const applied = on && usedTotal > 0 ? fmtPct(100 * (ws.weights[rw.id] || 0) / usedTotal).replace(",0", "") : "—";
+    const applied = rw.id === "proximite" && on && !(ws.weights.proximite > 0) ? '<span class="hint">complément</span>'
+      : on && usedTotal > 0 ? fmtPct(100 * (ws.weights[rw.id] || 0) / usedTotal).replace(",0", "") : "—";
     return `<tr${on ? "" : ' style="color:var(--muted);"'}><td><strong>${escapeHtml(rw.label)}</strong></td><td>${status}</td>
       <td class="num"><input class="ws-input" type="number" min="0" max="100" step="5" id="wsW-${rw.id}" data-weight="${rw.id}" value="${ws.weights[rw.id] ?? 0}"${rw.soon ? " disabled" : ""} aria-label="Poids de l'étape ${escapeHtml(rw.label)}"> %</td>
       <td class="num">${applied}</td></tr>`;
@@ -2629,6 +2707,7 @@ function renderPonderation(body) {
       <thead><tr><th>Étape</th><th>Pour ce retrait</th><th class="num">Poids choisi</th><th class="num">Poids appliqué</th></tr></thead>
       <tbody>${weightRows}</tbody>
     </table></div>
+    <p class="hint" style="margin:0;">Proximité à 0 % : elle ne sert qu'à compléter les candidats qu'aucune autre étape ne couvre (« complément »).</p>
     <p class="hint" style="margin:0;">Les poids valent pour tous les retraits du scénario. Ils sont ramenés à 100 % entre les étapes disponibles pour ce retrait (colonne « Poids appliqué ») ; pour chaque candidat, seules comptent les étapes qui le couvrent.</p>`;
   const noSource = !src.length ? `<div class="ws-note">Aucune source ne couvre ce retrait pour l'instant : les voix ${escapeHtml(deName(w.name))} restent non réparties en attendant l'étape « Proximité ».</div>` : "";
   const srcById = Object.fromEntries(src.map(s => [s.id, s]));
@@ -2638,6 +2717,7 @@ function renderPonderation(body) {
       cell: n => srcById[id] && srcById[id].covers(n) ? fmtPct(srcById[id].proposal[n] || 0) : null,
     })),
     { title: "Reports 2024", cell: n => srcById.reports ? fmtPct(srcById.reports.proposal[n] || 0) : null },
+    { title: "Proximité", cell: n => srcById.proximite ? fmtPct(srcById.proximite.proposal[n] || 0) : null },
   ];
   const weightBlocked = src.length > 0 && usedTotal === 0;
   body.innerHTML = wsCtx() + wsTrailHtml() + `
@@ -2646,6 +2726,7 @@ function renderPonderation(body) {
     ${noSource}
     ${weightBlocked ? `<div class="ws-note">Toutes les étapes disponibles ont un poids de 0 : aucune voix n'est répartie. Donnez un poids à au moins une étape.</div>` : ""}
     <p class="ws-source-title" style="margin:0;">2. Report retenu</p>
+    ${w.filledByProx && w.filledByProx.length ? `<p class="hint" style="margin:0;">Complétés par la Proximité (aucune autre étape ne les couvre) : ${w.filledByProx.map(escapeHtml).join(", ")}.</p>` : ""}
     ${reportTableHtml(w, w.report, refCols, x, "Report retenu")}
     <p class="hint" style="margin:0;">Le report retenu reste modifiable à la main.</p>
     <div class="ws-actions" style="justify-content:flex-start;"><button class="mini-btn" type="button" data-ws="recompute"${src.length ? "" : " disabled"}>Recalculer à partir des sources</button></div>
@@ -2688,6 +2769,7 @@ function renderWorkshop() {
   if (ws.step === "sondages") return renderSondages(body);
   if (ws.step === "rejet") return renderRejet(body);
   if (ws.step === "reports") return renderReports(body);
+  if (ws.step === "proximite") return renderProximite(body);
   if (ws.step === "ponderation") return renderPonderation(body);
   return renderScenario(body);
 }
@@ -2719,6 +2801,7 @@ function handleWorkshopAction(action) {
         rejet: { euroRef, presRef, euroWeight: REJET_EURO_DEFAULT_WEIGHT } };
       computeRejet(nw);
       nw.reports = { elec: reportsDefaultElectorate(c.name), fidelity: REPORTS_FIDELITY_DEFAULT, abstAuto: true };
+      nw.prox = { coefs: [...PROX_DEFAULT_COEFS] };
       ws.withdrawn.push(nw);
       ws.pick = null;
       const inPeriod = findTransferPairs(c.name, {});
@@ -2758,8 +2841,16 @@ function handleWorkshopAction(action) {
       if (!w.rejet.skipped) return wsGo("rejet");
       if (w.sondages.status === "declined") w.sondages.status = "pending";
       return wsGo("sondages");
-    case "back-from-ponderation":
+    case "to-proximite":
+      computeProx(w); w.reportEdited = false;
+      return wsGo("proximite");
+    case "prox-reset":
+      w.prox.coefs = [...PROX_DEFAULT_COEFS]; computeProx(w); w.reportEdited = false;
+      return renderWorkshop();
+    case "back-from-proximite":
       return wsGo("reports");
+    case "back-from-ponderation":
+      return wsGo("proximite");
     case "sondages-reset":
       w.sondages.proposal = prefillFromShares(w.sondages.shares, w.others);
       w.reportEdited = false;

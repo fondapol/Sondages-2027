@@ -2237,14 +2237,14 @@ function renderWorkshopSteps() {
   const order = WS_STEPS.map(s => s.key);
   const cur = order.indexOf(ws.step);
   const last = wsLast();
-  const sondagesSkipped = last && ["none", "declined"].includes(last.sondages.status) && cur > order.indexOf("sondages");
+  const sondagesSkipped = last && ["none", "declined"].includes(last.sondages.status) && cur >= order.indexOf("sondages");
   const rejetSkipped = last && last.rejet && last.rejet.skipped && cur > order.indexOf("rejet");
   document.getElementById("workshopSteps").innerHTML = WS_STEPS.map((st, i) => {
     let cls = i === cur ? "current" : i < cur ? "done" : "";
     if (st.soon) cls = "soon";
     const isSkipped = (st.key === "sondages" && sondagesSkipped) || (st.key === "rejet" && rejetSkipped);
-    if (isSkipped) cls = "skipped";
-    const extra = st.soon ? ' <span class="ws-soon">(à venir)</span>' : isSkipped ? ' <span class="ws-soon">(passée)</span>' : "";
+    if (isSkipped && i !== cur) cls = "skipped";
+    const extra = st.soon ? ' <span class="ws-soon">(à venir)</span>' : isSkipped ? ' <span class="ws-soon">(non prise en compte)</span>' : "";
     return `<li class="${cls}"${i === cur ? ' aria-current="step"' : ""}><span class="ws-num">${i + 1}</span>${st.label}${extra}</li>`;
   }).join("");
 }
@@ -2373,6 +2373,19 @@ function renderSondages(body) {
   const x = wsCompute().atWithdrawal[ws.withdrawn.length - 1];
   const head = wsCtx() + wsTrailHtml() + `<p><strong>${escapeHtml(w.name)}</strong> se retire avec <strong>${fmtPct(x)}</strong>. Que disent les sondages sur le report de ses électeurs ?</p>`;
 
+  if (w.sondages.status === "none") {
+    body.innerHTML = head + `
+      <div class="ws-question">
+        <p><strong>Aucun sondage disponible pour mesurer ce retrait.</strong> Aucun institut n'a jamais testé la même hypothèse avec puis sans ${escapeHtml(w.name)}, quelle que soit la période.</p>
+        <p>Cette étape n'est donc pas prise en compte pour ce retrait : le report sera estimé à partir des étapes suivantes.</p>
+      </div>
+      <div class="ws-actions">
+        <button class="secondary ws-left" type="button" data-ws="undo">← Annuler ce retrait</button>
+        <button class="primary" type="button" data-ws="after-sondages">Passer à l'étape Rejet →</button>
+      </div>`;
+    return;
+  }
+
   if (w.sondages.status === "pending") {
     const L = w.sondages.latest;
     body.innerHTML = head + `
@@ -2445,7 +2458,7 @@ function renderRejet(body) {
     ${reportTableHtml(w, r.proposal, refCols, x, "Proposition", null, n => (r.attrait && r.attrait[n]) ? "" : "(non couvert, saisie libre)")}
     <div class="ws-actions" style="justify-content:flex-start;"><button class="mini-btn" type="button" data-ws="rejet-reset">Revenir au calcul</button></div>
     <div class="ws-actions">
-      <button class="secondary ws-left" type="button" data-ws="back-from-rejet">← ${["none"].includes(w.sondages.status) ? "Annuler ce retrait" : "Retour"}</button>
+      <button class="secondary ws-left" type="button" data-ws="back-from-rejet">← Retour</button>
       <button class="primary" type="button" data-ws="to-ponderation" data-needs-valid>Étape suivante →</button>
     </div>`;
   const recalc = () => { computeRejet(w); w.reportEdited = false; renderWorkshop(); };
@@ -2481,7 +2494,14 @@ function renderPonderation(body) {
     </table></div>
     <p class="hint" style="margin:0;">Les poids valent pour tous les retraits du scénario. Ils sont ramenés à 100 % entre les étapes disponibles pour ce retrait (colonne « Poids appliqué ») ; pour chaque candidat, seules comptent les étapes qui le couvrent.</p>`;
   const noSource = !src.length ? `<div class="ws-note">Aucune source ne couvre ce retrait pour l'instant : les voix ${escapeHtml(deName(w.name))} restent non réparties en attendant l'étape « Proximité ».</div>` : "";
-  const refCols = src.map(s => ({ title: s.label, cell: n => s.covers(n) ? fmtPct(s.proposal[n] || 0) : null }));
+  const srcById = Object.fromEntries(src.map(s => [s.id, s]));
+  const refCols = [
+    ...["sondages", "rejet"].map(id => ({
+      title: WS_WEIGHT_ROWS.find(r => r.id === id).label,
+      cell: n => srcById[id] && srcById[id].covers(n) ? fmtPct(srcById[id].proposal[n] || 0) : null,
+    })),
+    { title: "Reports 2024", cell: () => '<span class="hint">à venir</span>' },
+  ];
   const weightBlocked = src.length > 0 && usedTotal === 0;
   body.innerHTML = wsCtx() + wsTrailHtml() + `
     <p><strong>${escapeHtml(w.name)}</strong> (${fmtPct(x)}) : choisissez le poids de chaque étape, puis vérifiez le report retenu.</p>
@@ -2569,7 +2589,7 @@ function handleWorkshopAction(action) {
       }
       const latest = latestTransferWave(c.name);
       if (latest) { nw.sondages.status = "pending"; nw.sondages.latest = latest; return wsGo("sondages"); }
-      return wsGo(afterSondagesStep(nw));
+      return wsGo("sondages"); // statut « none » : écran d'information avant le Rejet
     }
     case "sondages-yes":
       w.sondages.status = "latest";
@@ -2586,12 +2606,10 @@ function handleWorkshopAction(action) {
       computeRejet(w); w.reportEdited = false;
       return renderWorkshop();
     case "back-from-rejet":
-      if (w.sondages.status === "none") { ws.withdrawn.pop(); return wsGo(ws.withdrawn.length ? "scenario" : "retrait"); }
       if (w.sondages.status === "declined") w.sondages.status = "pending";
       return wsGo("sondages");
     case "back-from-ponderation":
       if (!w.rejet.skipped) return wsGo("rejet");
-      if (w.sondages.status === "none") { ws.withdrawn.pop(); return wsGo(ws.withdrawn.length ? "scenario" : "retrait"); }
       if (w.sondages.status === "declined") w.sondages.status = "pending";
       return wsGo("sondages");
     case "sondages-reset":

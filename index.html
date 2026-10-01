@@ -1981,6 +1981,16 @@ const fmtPts = v => `${v >= 0 ? "+" : "−"}${Math.abs(v).toFixed(1).replace("."
 const fmtCoef = v => v.toFixed(3).replace(".", ",");
 const escapeHtml = t => String(t).replace(/[&<>"]/g, ch => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[ch]));
 const round1 = v => Math.round(v * 10) / 10;
+// Après arrondi au dixième, un total peut atteindre 100,1 % : on retire l'excédent au plus gros poste.
+function capAt100(out) {
+  const keys = Object.keys(out);
+  const total = keys.reduce((a, k) => a + (out[k] || 0), 0);
+  if (total > 100 && keys.length) {
+    const big = keys.reduce((a, k) => ((out[k] || 0) > (out[a] || 0) ? k : a), keys[0]);
+    out[big] = round1(out[big] - (total - 100));
+  }
+  return out;
+}
 const pollPresent = p => Object.keys(p.scores).filter(k => p.scores[k] !== null && p.scores[k] !== undefined);
 
 function blocTagHtml(bloc) {
@@ -2057,7 +2067,7 @@ function prefillFromShares(shares, names) {
   names.forEach(n => { out[n] = round1(pos(n) * k); });
   const total = Object.values(out).reduce((a, b) => a + b, 0);
   if (total > 100) Object.keys(out).forEach(n => { out[n] = round1(out[n] * 100 / total); });
-  return out;
+  return capAt100(out);
 }
 
 const deName = n => (/^[aeiouyéèêàâîôûh]/i.test(n) ? "d'" : "de ") + n;
@@ -2071,13 +2081,19 @@ function useSondagesPairs(w, pairs, scopeLabel) {
 
 // Sources disponibles pour un retrait, avec leur poids (une seule pour l'instant).
 // Poids par défaut quand plusieurs sources sont disponibles (modifiables à l'étape Pondération).
-const WS_DEFAULT_WEIGHTS = { sondages: 60, rejet: 40 };
+const WS_DEFAULT_WEIGHTS = { sondages: 60, rejet: 40, reports: 0, proximite: 0 };
+const WS_WEIGHT_ROWS = [
+  { id: "sondages", label: "Sondages" },
+  { id: "rejet", label: "Rejet" },
+  { id: "reports", label: "Reports 2024", soon: true },
+  { id: "proximite", label: "Proximité", soon: true },
+];
 
 function wsSources(w) {
   const src = [];
   if (w.sondages.status === "period" || w.sondages.status === "latest") src.push({ id: "sondages", label: "Sondages", proposal: w.sondages.proposal, covers: n => true });
   if (w.rejet && w.rejet.available) src.push({ id: "rejet", label: "Rejet", proposal: w.rejet.proposal, covers: n => n in w.rejet.proposal });
-  src.forEach(s => { if (w.weights[s.id] === undefined) w.weights[s.id] = WS_DEFAULT_WEIGHTS[s.id] ?? 50; s.weight = src.length === 1 ? 100 : w.weights[s.id]; });
+  src.forEach(s => { s.weight = ws.weights[s.id] ?? 0; });
   return src;
 }
 
@@ -2092,7 +2108,7 @@ function weightedProposal(w) {
   });
   const total = Object.values(out).reduce((a, b) => a + b, 0);
   if (total > 100) Object.keys(out).forEach(n => { out[n] = round1(out[n] * 100 / total); });
-  return out;
+  return capAt100(out);
 }
 
 // --- Source « Rejet » (baromètre du rejet Cluster17 pour Politico) ------------
@@ -2149,6 +2165,7 @@ function computeRejet(w) {
   const total = Object.values(r.attrait).reduce((a, v) => a + v.value, 0);
   r.proposal = {};
   Object.entries(r.attrait).forEach(([n, v]) => { r.proposal[n] = total > 0 ? round1(100 * v.value / total) : 0; });
+  capAt100(r.proposal);
   r.available = total > 0;
 }
 
@@ -2195,6 +2212,7 @@ function openWorkshop() {
     base, rawTotal, coef, rare: rarelyTestedTogether(base.map(c => c.name)),
     period: periodTitleSuffix(), pollsUsed, instituts, simulateMode: state.excludeUnselected,
     withdrawn: [], step: "depart", pick: null,
+    weights: { ...WS_DEFAULT_WEIGHTS },
   };
   renderWorkshop();
   const dlg = document.getElementById("workshopDialog");
@@ -2273,7 +2291,7 @@ function reportTableHtml(w, values, refCols, x, valueTitle, editable, nameNote) 
 
 function bindReportInputs(body, values, x, onChange) {
   const refresh = () => {
-    const t = Object.values(values).reduce((a, b) => a + (b || 0), 0);
+    const t = round1(Object.values(values).reduce((a, b) => a + (b || 0), 0));
     const un = Math.max(0, 100 - t);
     body.querySelector("#wsUnalloc").textContent = fmtPct(un);
     body.querySelector("#wsUnallocPts").textContent = fmtPts(x * un / 100);
@@ -2301,6 +2319,7 @@ function bindReportInputs(body, values, x, onChange) {
     free.forEach(n => { values[n] = round1(values[n] * (100 - L) / F); });
     const t = Object.values(values).reduce((a, b) => a + (b || 0), 0);
     if (t > 100 && free.length) { const big = free.sort((a, b) => values[b] - values[a])[0]; values[big] = round1(values[big] - (t - 100)); }
+    Object.keys(values).forEach(n => { values[n] = round1(values[n] || 0); });
     body.querySelectorAll("[data-val]").forEach(inp => { inp.value = values[inp.getAttribute("data-val")] || 0; });
     if (onChange) onChange();
     refresh();
@@ -2397,21 +2416,29 @@ function renderRejet(body) {
   const opt = (list, cur, lab) => `<option value="">— aucun —</option>` + list.map(k => `<option value="${escapeHtml(k)}"${k === cur ? " selected" : ""}>${escapeHtml(lab(k))}</option>`).join("");
   const covered = Object.keys(r.attrait || {});
   const uncovered = w.others.filter(n => !covered.includes(n));
+  const we = r.euroRef ? (r.presRef ? r.euroWeight : 100) : 0;
+  const wp = r.presRef ? 100 - we : 0;
   const refCols = [
     { title: "Euro 2024", cell: n => r.attrait[n] && r.attrait[n].euro !== null ? fmtPct(r.attrait[n].euro).replace(",0", "") : null },
     { title: "Prés. 2022", cell: n => r.attrait[n] && r.attrait[n].pres !== null ? fmtPct(r.attrait[n].pres).replace(",0", "") : null },
+    { title: `Combiné (${we}/${wp})`, cell: n => r.attrait[n] ? fmtPct(r.attrait[n].value) : null },
   ];
   body.innerHTML = wsCtx() + wsTrailHtml() + `
     <p><strong>${escapeHtml(w.name)}</strong> (${fmtPct(x)}) : vers qui ses électeurs sont-ils prêts à se tourner ?</p>
     <div class="ws-source">
       <p class="ws-source-title">Rejet — ${escapeHtml(REJET_SOURCE)}</p>
-      <p class="hint" style="margin:0;">Pour chaque candidat restant, part des électeurs de référence qui ont une <strong>probabilité forte</strong> (7 à 10 sur 10) de voter un jour pour lui. Les voix ${escapeHtml(deName(w.name))} sont réparties au prorata de cet attrait. Calcul calé sur les retraits d'Attal et de Philippe, les seuls que les sondages mesurent directement.</p>
-      <div class="ws-refs">
-        <label for="wsRefEuro">Électeurs aux européennes 2024 <select id="wsRefEuro">${opt(REJET_EURO, r.euroRef, k => k)}</select></label>
-        <label for="wsRefPres">Électeurs à la présidentielle 2022 <select id="wsRefPres">${opt(REJET_PRES, r.presRef, presLabel)}</select></label>
-        <label for="wsRefWeight">Poids des européennes 2024 <span><input class="ws-input" type="number" min="0" max="100" step="5" id="wsRefWeight" value="${r.euroWeight}"${r.euroRef && r.presRef ? "" : " disabled"}> %</span></label>
-      </div>
-      <p class="hint" style="margin:0;">Électorat de référence pré-rempli d'après la famille politique ${escapeHtml(deName(w.name))} (approximation, modifiable). Européennes 2024 pondérées à ${REJET_EURO_DEFAULT_WEIGHT} % par défaut : plus récentes, elles collent mieux aux mesures des sondages.</p>
+      <p class="hint" style="margin:0;">Pour chaque candidat restant, on regarde quelle part des électeurs proches ${escapeHtml(deName(w.name))} a une <strong>probabilité forte</strong> (7 à 10 sur 10) de voter un jour pour lui. Ses voix sont ensuite réparties au prorata de cet attrait.</p>
+      <p style="margin:0; font-size:0.86rem;"><strong>Le calcul utilise les deux élections à la fois</strong> et les combine selon les poids ci-dessous :</p>
+      <div class="table-scroll"><table class="ws-table">
+        <thead><tr><th>Élection</th><th>Électorat proche ${escapeHtml(deName(w.name))}</th><th class="num">Poids</th></tr></thead>
+        <tbody>
+          <tr><td>Européennes 2024</td><td><select id="wsRefEuro" aria-label="Électorat aux européennes 2024">${opt(REJET_EURO, r.euroRef, k => `électeurs ${k}`)}</select></td>
+              <td class="num"><input class="ws-input" type="number" min="0" max="100" step="5" id="wsRefWeight" value="${we}"${r.euroRef && r.presRef ? "" : " disabled"} aria-label="Poids des européennes 2024"> %</td></tr>
+          <tr><td>Présidentielle 2022</td><td><select id="wsRefPres" aria-label="Électorat à la présidentielle 2022">${opt(REJET_PRES, r.presRef, presLabel)}</select></td>
+              <td class="num">${wp} %</td></tr>
+        </tbody>
+      </table></div>
+      <p class="hint" style="margin:0;">Électorats pré-remplis d'après la famille politique ${escapeHtml(deName(w.name))} (approximation, modifiable ; « aucun » écarte une élection). Européennes 2024 à ${REJET_EURO_DEFAULT_WEIGHT} % par défaut : plus récentes, elles collent le mieux aux retraits d'Attal et de Philippe mesurés dans les sondages ; la présidentielle 2022 complète à ${100 - REJET_EURO_DEFAULT_WEIGHT} %.</p>
       ${uncovered.length ? `<p class="hint" style="margin:0;">Non couverts par le baromètre : ${uncovered.map(escapeHtml).join(", ")}. Vous pouvez leur attribuer une part à la main dans le tableau ; l'étape « Proximité » (à venir) les pré-remplira.</p>` : ""}
     </div>
     ${r.available ? "" : `<div class="ws-note">Aucun candidat restant n'est couvert par le baromètre pour cet électorat : la proposition est vide. Choisissez un autre électorat de référence, ou saisissez vos propres valeurs.</div>`}
@@ -2436,16 +2463,32 @@ function renderPonderation(body) {
   const skipped = w.sondages.status === "none"
     ? `Aucun sondage n'a jamais testé la même hypothèse avec puis sans ${escapeHtml(w.name)} : l'étape « Sondages » a été passée.`
     : w.sondages.status === "declined" ? `Vous avez choisi de ne pas utiliser de sondage pour ${escapeHtml(w.name)} : l'étape « Sondages » a été passée.` : "";
-  const weightsHtml = src.length > 1
-    ? `<div class="ws-refs">${src.map(s => `<label for="wsW-${s.id}">${escapeHtml(s.label)} <span><input class="ws-input" type="number" min="0" max="100" step="5" id="wsW-${s.id}" data-weight="${s.id}" value="${s.weight}"> %</span></label>`).join("")}</div>
-       <p class="hint" style="margin:0;">Chaque candidat reçoit la moyenne des propositions, pondérée par ces poids, parmi les sources qui le couvrent.</p>`
-    : src.length === 1 ? `<p style="margin:0;">Une seule source disponible : <strong>${escapeHtml(src[0].label)}</strong> (100 %).</p>` : "";
+  const avail = new Set(src.map(s => s.id));
+  const usedTotal = src.reduce((a, s) => a + (ws.weights[s.id] || 0), 0);
+  const weightRows = WS_WEIGHT_ROWS.map(rw => {
+    const on = avail.has(rw.id);
+    const status = rw.soon ? '<span class="hint">à venir</span>' : on ? "disponible" : '<span class="hint">passée pour ce retrait</span>';
+    const applied = on && usedTotal > 0 ? fmtPct(100 * (ws.weights[rw.id] || 0) / usedTotal).replace(",0", "") : "—";
+    return `<tr${on ? "" : ' style="color:var(--muted);"'}><td><strong>${escapeHtml(rw.label)}</strong></td><td>${status}</td>
+      <td class="num"><input class="ws-input" type="number" min="0" max="100" step="5" id="wsW-${rw.id}" data-weight="${rw.id}" value="${ws.weights[rw.id] ?? 0}"${rw.soon ? " disabled" : ""} aria-label="Poids de l'étape ${escapeHtml(rw.label)}"> %</td>
+      <td class="num">${applied}</td></tr>`;
+  }).join("");
+  const weightsHtml = `
+    <p class="ws-source-title">1. Poids de chaque étape</p>
+    <div class="table-scroll"><table class="ws-table">
+      <thead><tr><th>Étape</th><th>Pour ce retrait</th><th class="num">Poids choisi</th><th class="num">Poids appliqué</th></tr></thead>
+      <tbody>${weightRows}</tbody>
+    </table></div>
+    <p class="hint" style="margin:0;">Les poids valent pour tous les retraits du scénario. Ils sont ramenés à 100 % entre les étapes disponibles pour ce retrait (colonne « Poids appliqué ») ; pour chaque candidat, seules comptent les étapes qui le couvrent.</p>`;
   const noSource = !src.length ? `<div class="ws-note">Aucune source ne couvre ce retrait pour l'instant : les voix ${escapeHtml(deName(w.name))} restent non réparties en attendant l'étape « Proximité ».</div>` : "";
   const refCols = src.map(s => ({ title: s.label, cell: n => s.covers(n) ? fmtPct(s.proposal[n] || 0) : null }));
+  const weightBlocked = src.length > 0 && usedTotal === 0;
   body.innerHTML = wsCtx() + wsTrailHtml() + `
-    <p><strong>${escapeHtml(w.name)}</strong> (${fmtPct(x)}) : pondération des sources et report retenu.</p>
+    <p><strong>${escapeHtml(w.name)}</strong> (${fmtPct(x)}) : choisissez le poids de chaque étape, puis vérifiez le report retenu.</p>
     <div class="ws-source">${skipped ? `<p class="hint" style="margin:0;">${skipped}</p>` : ""}${weightsHtml}</div>
     ${noSource}
+    ${weightBlocked ? `<div class="ws-note">Toutes les étapes disponibles ont un poids de 0 : aucune voix n'est répartie. Donnez un poids à au moins une étape.</div>` : ""}
+    <p class="ws-source-title" style="margin:0;">2. Report retenu</p>
     ${reportTableHtml(w, w.report, refCols, x, "Report retenu")}
     <p class="hint" style="margin:0;">Le report retenu reste modifiable à la main.</p>
     <div class="ws-actions" style="justify-content:flex-start;"><button class="mini-btn" type="button" data-ws="recompute"${src.length ? "" : " disabled"}>Recalculer à partir des sources</button></div>
@@ -2456,7 +2499,7 @@ function renderPonderation(body) {
     </div>`;
   body.querySelectorAll("[data-weight]").forEach(inp => inp.addEventListener("change", () => {
     const v = parseFloat(inp.value);
-    w.weights[inp.getAttribute("data-weight")] = isNaN(v) ? 0 : Math.max(0, Math.min(100, v));
+    ws.weights[inp.getAttribute("data-weight")] = isNaN(v) ? 0 : Math.max(0, Math.min(100, v));
     w.reportEdited = false; renderWorkshop();
   }));
   bindReportInputs(body, w.report, x, () => { w.reportEdited = true; });
@@ -2513,7 +2556,7 @@ function handleWorkshopAction(action) {
       if (!c) return;
       const others = wsRemaining().filter(o => o.name !== c.name).map(o => o.name);
       const [euroRef, presRef] = rejetDefaultRefs(c.name, c.bloc);
-      const nw = { name: c.name, bloc: c.bloc, score: c.score, others, sondages: { status: "none" }, report: {}, reportEdited: false, weights: {},
+      const nw = { name: c.name, bloc: c.bloc, score: c.score, others, sondages: { status: "none" }, report: {}, reportEdited: false,
         rejet: { euroRef, presRef, euroWeight: REJET_EURO_DEFAULT_WEIGHT } };
       computeRejet(nw);
       ws.withdrawn.push(nw);

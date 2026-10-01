@@ -225,6 +225,12 @@
   .ws-question .ws-actions { padding-top: 0; justify-content: flex-start; }
   .ws-table td.ws-raw { color: var(--muted); }
   .ws-table td.num { white-space: nowrap; }
+  .ws-dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 7px; vertical-align: 1px; }
+  .ws-bar-cell { min-width: 150px; }
+  .ws-bar-cell .bar-bg { height: 10px; }
+  .ws-bar-cell .moyenne-value { min-width: 64px; text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .ws-effect { min-width: 170px; }
+  .ws-effect .num { white-space: nowrap; font-variant-numeric: tabular-nums; min-width: 56px; text-align: right; }
   .ws-refs { display: flex; flex-wrap: wrap; gap: 10px 16px; font-size: 0.82rem; }
   .ws-refs label { display: flex; flex-direction: column; gap: 4px; color: var(--muted); font-weight: 600; min-width: 0; }
   .ws-refs select { padding: 5px 8px; border: 1px solid var(--border); border-radius: 6px; font: inherit; color: var(--text); background: var(--card); max-width: 100%; }
@@ -1993,6 +1999,20 @@ function capAt100(out) {
 }
 const pollPresent = p => Object.keys(p.scores).filter(k => p.scores[k] !== null && p.scores[k] !== undefined);
 
+// Couleurs reprises du simulateur : barre à la couleur du bloc, pastille à la couleur de la tendance.
+const BLOC_VAR = { "BLOC GAUCHE": "var(--gauche)", "CENTRE": "var(--centre)", "BLOC DROITE": "var(--droite)" };
+function wsCand(n) { return dataset.candidates.find(c => c.name === n) || {}; }
+function wsBlocColor(n) { return BLOC_VAR[wsCand(n).bloc] || "var(--accent)"; }
+function wsDot(n) {
+  const sb = subBlocOf(n, wsCand(n).bloc) || "Non classé";
+  return `<span class="ws-dot" style="background:${SUB_BLOC_COLOR[sb] || "#999"}" title="${escapeHtml(sb)}"></span>`;
+}
+function wsBar(n, value, max) {
+  const w = max > 0 ? Math.max(0, Math.min(100, 100 * value / max)) : 0;
+  return `<div class="bar-bg ws-bar-bg"><div class="bar-fill" data-bar="${escapeHtml(n)}" style="width:${w.toFixed(1)}%; background:${wsBlocColor(n)}"></div></div>`;
+}
+const fmtPtsColored = v => `<span style="color:${v > 0.05 ? "#1a7f37" : v < -0.05 ? "#c0392b" : "var(--muted)"}; font-weight:600;">${fmtPts(v)}</span>`;
+
 function blocTagHtml(bloc) {
   const cls = BLOC_CLASS[bloc] || "";
   return `<span class="bloc-tag tag-${cls}">${BLOC_LABEL[bloc] || bloc || "—"}</span>`;
@@ -2390,17 +2410,17 @@ function reportTableHtml(w, values, refCols, x, valueTitle, editable, nameNote) 
     .slice()
     .sort((a, b) => (canEdit(b) - canEdit(a)) || ((values[b] || 0) - (values[a] || 0)))
     .map(n => `<tr${canEdit(n) ? "" : ' style="color:var(--muted);"'}>
-      <td><strong>${escapeHtml(n)}</strong>${note(n) ? ` <span class="hint">${note(n)}</span>` : ""}</td>
+      <td>${wsDot(n)}<strong>${escapeHtml(n)}</strong>${note(n) ? ` <span class="hint">${note(n)}</span>` : ""}</td>
       ${refCols.map(c => `<td class="num">${c.cell(n) ?? '<span class="hint">—</span>'}</td>`).join("")}
       <td class="num">${canEdit(n)
         ? `<input class="ws-input" type="number" min="0" max="100" step="0.1" inputmode="decimal" id="wsv-${escapeHtml(n)}" data-val="${escapeHtml(n)}" value="${values[n] || 0}" aria-label="Part vers ${escapeHtml(n)} en %"> %`
         : '<span class="hint">non couvert</span>'}</td>
-      <td class="num" data-pts="${escapeHtml(n)}">${canEdit(n) ? fmtPts(x * (values[n] || 0) / 100) : ""}</td>
+      <td class="ws-effect">${canEdit(n) ? `<div class="bar-cell ws-bar-cell">${wsBar(n, values[n] || 0, 100)}<span class="num" data-pts="${escapeHtml(n)}">${fmtPts(x * (values[n] || 0) / 100)}</span></div>` : ""}</td>
     </tr>`).join("");
   const total = Object.values(values).reduce((a, b) => a + (b || 0), 0);
   const blanks = refCols.map(() => "<td></td>").join("");
   return `<div class="table-scroll"><table class="ws-table">
-      <thead><tr><th>Vers</th>${refCols.map(c => `<th class="num">${c.title}</th>`).join("")}<th class="num">${valueTitle}</th><th class="num">Effet</th></tr></thead>
+      <thead><tr><th>Vers</th>${refCols.map(c => `<th class="num">${c.title}</th>`).join("")}<th class="num">${valueTitle}</th><th>Part des voix · effet</th></tr></thead>
       <tbody>${rows}
         <tr><td>Non réparti <span class="hint">(abstention, blanc, écarts de mesure…)</span></td>${blanks}<td class="num" id="wsUnalloc">${fmtPct(Math.max(0, 100 - total))}</td><td class="num" id="wsUnallocPts">${fmtPts(x * Math.max(0, 100 - total) / 100)}</td></tr>
         <tr class="ws-total"><td>Total</td>${blanks}<td class="num" id="wsTotal">${fmtPct(Math.min(total, 100))}</td><td></td></tr>
@@ -2419,7 +2439,10 @@ function bindReportInputs(body, values, x, onChange) {
     body.querySelector("#wsTotal").textContent = fmtPct(Math.min(t, 100));
     body.querySelector("#wsReportErr").hidden = t <= 100.05;
     body.querySelectorAll("[data-needs-valid]").forEach(b => { b.disabled = t > 100.05; });
-    Object.keys(values).forEach(n => { const cell = body.querySelector(`[data-pts="${CSS.escape(n)}"]`); if (cell) cell.textContent = fmtPts(x * (values[n] || 0) / 100); });
+    Object.keys(values).forEach(n => {
+      const cell = body.querySelector(`[data-pts="${CSS.escape(n)}"]`); if (cell) cell.textContent = fmtPts(x * (values[n] || 0) / 100);
+      const bar = body.querySelector(`[data-bar="${CSS.escape(n)}"]`); if (bar) bar.style.width = `${Math.max(0, Math.min(100, values[n] || 0))}%`;
+    });
   };
   const locked = new Set(); // valeurs saisies à la main dans ce tableau
   body.querySelectorAll("[data-val]").forEach(inp => inp.addEventListener("input", () => {
@@ -2456,7 +2479,9 @@ function renderDepart(body) {
     return;
   }
   const first = ws.base[0];
-  const rows = ws.base.map(c => `<tr><td><strong>${escapeHtml(c.name)}</strong></td><td>${blocTagHtml(c.bloc)}</td><td class="num">${c.n}</td><td class="num ws-raw">${fmtPct(c.raw)}</td><td class="num"><strong>${fmtPct(c.score)}</strong></td></tr>`).join("");
+  const maxS = Math.max(...ws.base.map(c => c.score), 1);
+  const rows = ws.base.map(c => `<tr><td>${wsDot(c.name)}<strong>${escapeHtml(c.name)}</strong></td><td>${blocTagHtml(c.bloc)}</td><td class="num">${c.n}</td><td class="num ws-raw">${fmtPct(c.raw)}</td>
+    <td><div class="bar-cell ws-bar-cell">${wsBar(c.name, c.score, maxS)}<span class="moyenne-value">${fmtPct(c.score)}</span></div></td></tr>`).join("");
   const rareHtml = ws.rare.length ? `<div class="ws-note"><strong>À surveiller :</strong> ${ws.rare.map(r => `${escapeHtml(r.a)} et ${escapeHtml(r.b)} ne sont testés ensemble que dans ${r.both} sondage${r.both > 1 ? "s" : ""} sur ${r.min}`).join(" ; ")}. Additionner leurs moyennes revient à compter une partie de leur électorat deux fois, ce qui gonfle le total. Pour une base plus juste, fermez cette fenêtre, décochez l'un des deux dans la liste des candidats du simulateur, puis rouvrez-la.</div>` : "";
   body.innerHTML = wsCtx() + `
     <div class="ws-explain">
@@ -2466,8 +2491,8 @@ function renderDepart(body) {
     </div>
     ${rareHtml}
     <div class="table-scroll"><table class="ws-table">
-      <thead><tr><th>Candidat</th><th>Bloc</th><th class="num">Sondages</th><th class="num">Moyenne brute</th><th class="num">Départ (base 100)</th></tr></thead>
-      <tbody>${rows}<tr class="ws-total"><td colspan="3">Total</td><td class="num ws-raw">${fmtPct(ws.rawTotal)}</td><td class="num">100,0 %</td></tr></tbody>
+      <thead><tr><th>Candidat</th><th>Bloc</th><th class="num">Sondages</th><th class="num">Moyenne brute</th><th>Départ (base 100)</th></tr></thead>
+      <tbody>${rows}<tr class="ws-total"><td colspan="3">Total</td><td class="num ws-raw">${fmtPct(ws.rawTotal)}</td><td><span class="moyenne-value">100,0 %</span></td></tr></tbody>
     </table></div>
     <div class="ws-actions"><button class="primary" type="button" data-ws="to-withdraw">Choisir un candidat à retirer →</button></div>`;
 }
@@ -2475,7 +2500,7 @@ function renderDepart(body) {
 function renderRetrait(body) {
   const { scores } = wsCompute();
   const choices = wsRemaining().map(c => `
-    <label class="ws-choice${ws.pick === c.name ? " selected" : ""}">
+    <label class="ws-choice${ws.pick === c.name ? " selected" : ""}" style="border-left:4px solid ${SUB_BLOC_COLOR[subBlocOf(c.name, c.bloc) || "Non classé"] || "#999"};">
       <input type="radio" name="wsPick" value="${escapeHtml(c.name)}"${ws.pick === c.name ? " checked" : ""}>
       <span>${escapeHtml(c.name)}</span><span class="ws-score">${fmtPct(scores[c.name])}</span>
     </label>`).join("");
@@ -2746,13 +2771,23 @@ function renderPonderation(body) {
 function renderScenario(body) {
   const { scores, unallocated, atWithdrawal } = wsCompute();
   const remaining = wsRemaining().map(c => ({ ...c, est: scores[c.name] })).sort((a, b) => b.est - a.est);
-  const rows = remaining.map((c, i) => `<tr${i < 2 ? ' class="row-qualified"' : ""}><td><strong>${escapeHtml(c.name)}</strong></td><td>${blocTagHtml(c.bloc)}</td><td class="num">${fmtPct(c.score)}</td><td class="num"><strong>${fmtPct(c.est)}</strong></td><td class="num">${fmtPts(c.est - c.score)}</td></tr>`).join("");
-  const outRows = ws.withdrawn.map((w, i) => `<tr style="color:var(--muted);"><td><s>${escapeHtml(w.name)}</s> <span class="hint">(retiré à ${fmtPct(atWithdrawal[i])})</span></td><td>${blocTagHtml(w.bloc)}</td><td class="num">${fmtPct(w.score)}</td><td class="num">—</td><td class="num">${fmtPts(-w.score)}</td></tr>`).join("");
+  const maxE = Math.max(...remaining.map(c => c.est), 1);
+  const rows = remaining.map((c, i) => `<tr${i < 2 ? ' class="row-qualified"' : ""}><td>${wsDot(c.name)}<strong>${escapeHtml(c.name)}</strong></td><td>${blocTagHtml(c.bloc)}</td><td class="num">${fmtPct(c.score)}</td>
+    <td><div class="bar-cell ws-bar-cell">${wsBar(c.name, c.est, maxE)}<span class="moyenne-value">${fmtPct(c.est)}</span></div></td><td class="num">${fmtPtsColored(c.est - c.score)}</td></tr>`).join("");
+  const outRows = ws.withdrawn.map((w, i) => `<tr style="color:var(--muted);"><td>${wsDot(w.name)}<s>${escapeHtml(w.name)}</s> <span class="hint">(retiré à ${fmtPct(atWithdrawal[i])})</span></td><td>${blocTagHtml(w.bloc)}</td><td class="num">${fmtPct(w.score)}</td><td class="num">—</td><td class="num">${fmtPtsColored(-w.score)}</td></tr>`).join("");
   body.innerHTML = wsCtx() + wsTrailHtml() + `
     <p>Votre estimation après ${ws.withdrawn.length} retrait${ws.withdrawn.length > 1 ? "s" : ""} (base 100). Les deux premiers sont surlignés.</p>
+    ${(() => {
+      const blocs = ["BLOC GAUCHE", "CENTRE", "BLOC DROITE"].map(b => {
+        const dep = ws.base.filter(c => c.bloc === b).reduce((a, c) => a + c.score, 0);
+        const est = remaining.filter(c => c.bloc === b).reduce((a, c) => a + c.est, 0);
+        return `<div class="summary-box bloc-${BLOC_CLASS[b]}"><div class="val">${fmtPct(est)}</div><div class="lbl">${BLOC_LABEL[b]} — départ ${fmtPct(dep)} (${fmtPtsColored(est - dep)})</div></div>`;
+      }).join("");
+      return `<div class="summary-row">${blocs}</div>`;
+    })()}
     <div class="table-scroll"><table class="ws-table">
-      <thead><tr><th>Candidat</th><th>Bloc</th><th class="num">Départ</th><th class="num">Estimation</th><th class="num">Écart</th></tr></thead>
-      <tbody>${rows}${outRows}<tr class="ws-total"><td colspan="3">Voix non réparties</td><td class="num">${fmtPct(unallocated)}</td><td></td></tr></tbody>
+      <thead><tr><th>Candidat</th><th>Bloc</th><th class="num">Départ</th><th>Estimation</th><th class="num">Écart</th></tr></thead>
+      <tbody>${rows}${outRows}<tr class="ws-total"><td colspan="3">Voix non réparties</td><td><span class="moyenne-value">${fmtPct(unallocated)}</span></td><td></td></tr></tbody>
     </table></div>
     <div class="ws-actions">
       <button class="secondary ws-left" type="button" data-ws="reset">Recommencer</button>

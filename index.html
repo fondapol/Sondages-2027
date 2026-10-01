@@ -1969,7 +1969,7 @@ const WS_STEPS = [
   { key: "retrait", label: "Retrait" },
   { key: "sondages", label: "Sondages 2026" },
   { key: "rejet", label: "Rejets 2026" },
-  { key: "reports", label: "Reports 2024", soon: true },
+  { key: "reports", label: "Reports 2024" },
   { key: "proximite", label: "Proximité", soon: true },
   { key: "ponderation", label: "Pondération" },
   { key: "scenario", label: "Scénario" },
@@ -2081,11 +2081,11 @@ function useSondagesPairs(w, pairs, scopeLabel) {
 
 // Sources disponibles pour un retrait, avec leur poids (une seule pour l'instant).
 // Poids par défaut quand plusieurs sources sont disponibles (modifiables à l'étape Pondération).
-const WS_DEFAULT_WEIGHTS = { sondages: 60, rejet: 40, reports: 0, proximite: 0 };
+const WS_DEFAULT_WEIGHTS = { sondages: 50, rejet: 30, reports: 20, proximite: 0 };
 const WS_WEIGHT_ROWS = [
   { id: "sondages", label: "Sondages 2026" },
   { id: "rejet", label: "Rejets 2026" },
-  { id: "reports", label: "Reports 2024", soon: true },
+  { id: "reports", label: "Reports 2024" },
   { id: "proximite", label: "Proximité", soon: true },
 ];
 
@@ -2093,6 +2093,7 @@ function wsSources(w) {
   const src = [];
   if (w.sondages.status === "period" || w.sondages.status === "latest") src.push({ id: "sondages", label: "Sondages 2026", proposal: w.sondages.proposal, covers: n => true });
   if (w.rejet && w.rejet.available) src.push({ id: "rejet", label: "Rejets 2026", proposal: w.rejet.proposal, covers: n => n in w.rejet.proposal });
+  if (w.reports && w.reports.available) src.push({ id: "reports", label: "Reports 2024", proposal: w.reports.proposal, covers: n => true });
   src.forEach(s => { s.weight = ws.weights[s.id] ?? 0; });
   return src;
 }
@@ -2169,13 +2170,95 @@ function computeRejet(w) {
   r.available = total > 0;
 }
 
+// --- Source « Reports 2024 » (Ipsos-Talan, second tour des législatives) -------
+// Ipsos-Talan pour France Télévisions, Radio France, France 24-RFI et LCP-Assemblée
+// nationale, 7 juillet 2024. Pour chaque électorat du premier tour : vote au second
+// tour selon le duel face au RN, et part d'abstention, blanc et nul.
+const REPORTS_SOURCE = "Ipsos-Talan pour France Télévisions, Radio France, France 24-RFI et LCP-Assemblée nationale, 7 juillet 2024";
+const REPORTS_CAMPS = [
+  { id: "LFI", label: "LFI", subBlocs: ["Gauche radicale"] },
+  { id: "GAUCHE", label: "PS, EELV ou PCF", subBlocs: ["Gauche classique"] },
+  { id: "ENS", label: "Ensemble", subBlocs: ["Centre gauche", "Centre droit"] },
+  { id: "LR", label: "LR / divers droite", subBlocs: ["Droite classique", "Divers droite"] },
+  { id: "RN", label: "RN et droite radicale", subBlocs: ["Droite radicale"] },
+];
+// Duels mesurés : [camp opposé au RN, % pour ce camp, % pour le RN, % abstention-blanc-nul]
+const REPORTS_DUELS = {
+  ENS: { label: "Électeurs Ensemble", own: ["ENS"], duels: [["LFI", 43, 19, 38], ["GAUCHE", 54, 15, 31]] },
+  LRDVD: { label: "Électeurs LR / divers droite", own: ["LR"], duels: [["LFI", 26, 38, 36], ["GAUCHE", 29, 34, 37], ["ENS", 53, 26, 21], ["LR", 79, 4, 17]] },
+  NFP: { label: "Électeurs Nouveau Front populaire", own: ["LFI", "GAUCHE"], duels: [["ENS", 72, 3, 25], ["LR", 70, 2, 28]] },
+};
+const REPORTS_FIDELITY_DEFAULT = 60; // part restant dans le camp, calée sur les retraits d'Attal et Philippe mesurés dans les sondages
+
+function campOf(name) {
+  const sb = subBlocOf(name, (dataset.candidates.find(c => c.name === name) || {}).bloc);
+  const camp = REPORTS_CAMPS.find(c => c.subBlocs.includes(sb));
+  return camp ? camp.id : null;
+}
+
+function reportsDefaultElectorate(name) {
+  const camp = campOf(name);
+  if (camp === "ENS") return "ENS";
+  if (camp === "LR") return "LRDVD";
+  if (camp === "LFI" || camp === "GAUCHE") return "NFP";
+  return null; // électorat RN : non mesuré dans le tableau 2024
+}
+
+// Attrait de chaque camp (hors camp d'origine) pour l'électorat : part obtenue face
+// au RN ; pour le RN, moyenne de sa part dans les duels. Abstention : moyenne des duels.
+function reportsAttraction(elecId) {
+  const e = REPORTS_DUELS[elecId];
+  const attr = {}; const rn = []; const abst = [];
+  e.duels.forEach(([camp, vCamp, vRn, vAbst]) => {
+    if (e.own.includes(camp)) return;
+    attr[camp] = vCamp; rn.push(vRn); abst.push(vAbst);
+  });
+  attr.RN = rn.reduce((a, b) => a + b, 0) / rn.length;
+  const estimated = {};
+  // Électeurs Ensemble face à un LR : non mesuré, estimé par symétrie (électeurs LR face à un Ensemble).
+  if (elecId === "ENS" && attr.LR === undefined) { attr.LR = 53; estimated.LR = "estimé par symétrie (électeurs LR / divers droite face à un candidat Ensemble)"; }
+  return { attr, estimated, abst: abst.reduce((a, b) => a + b, 0) / abst.length };
+}
+
+function computeReports(w) {
+  const r = w.reports;
+  r.proposal = {}; r.available = false;
+  if (!r.elec) return;
+  const e = REPORTS_DUELS[r.elec];
+  const { attr, estimated, abst } = reportsAttraction(r.elec);
+  if (r.abst === undefined || r.abstAuto) { r.abst = round1(abst); r.abstAuto = true; }
+  r.attr = attr; r.estimated = estimated;
+  const { scores } = wsCompute(ws.withdrawn.indexOf(w)); // scores au moment du retrait
+  const byCamp = {};
+  w.others.forEach(n => { const c = campOf(n); if (c) (byCamp[c] = byCamp[c] || []).push(n); });
+  const ownCands = e.own.flatMap(c => byCamp[c] || []);
+  const fid = ownCands.length ? r.fidelity / 100 : 0;
+  // 1) fidélité au camp, répartie au prorata des scores des candidats du camp
+  const ownTotal = ownCands.reduce((a, n) => a + (scores[n] || 0), 0);
+  ownCands.forEach(n => { r.proposal[n] = (r.proposal[n] || 0) + 100 * fid * (scores[n] || 0) / Math.max(ownTotal, 1e-9); });
+  // 2) le reste : une part ne se reporte sur personne, le solde va aux autres camps selon leur attrait
+  const rest = 100 * (1 - fid) * (1 - r.abst / 100);
+  const otherCamps = Object.keys(byCamp).filter(c => !e.own.includes(c) && attr[c] !== undefined);
+  const attrTotal = otherCamps.reduce((a, c) => a + attr[c], 0);
+  otherCamps.forEach(c => {
+    const campShare = attrTotal ? rest * attr[c] / attrTotal : 0;
+    const cands = byCamp[c]; const t = cands.reduce((a, n) => a + (scores[n] || 0), 0);
+    cands.forEach(n => { r.proposal[n] = (r.proposal[n] || 0) + campShare * (scores[n] || 0) / Math.max(t, 1e-9); });
+  });
+  Object.keys(r.proposal).forEach(n => { r.proposal[n] = round1(r.proposal[n]); });
+  capAt100(r.proposal);
+  r.hasOwn = ownCands.length > 0;
+  r.available = Object.values(r.proposal).some(v => v > 0);
+}
+
 // --- Calcul du scénario -----------------------------------------------------
-function wsCompute() {
+// upTo : n'applique que les n premiers retraits (scores juste avant le retrait suivant).
+function wsCompute(upTo) {
   const scores = {};
   ws.base.forEach(c => { scores[c.name] = c.score; });
   let unallocated = 0;
   const atWithdrawal = [];
-  ws.withdrawn.forEach(w => {
+  ws.withdrawn.slice(0, upTo === undefined ? ws.withdrawn.length : upTo).forEach(w => {
     const x = scores[w.name] ?? 0;
     atWithdrawal.push(x);
     delete scores[w.name];
@@ -2239,10 +2322,11 @@ function renderWorkshopSteps() {
   const last = wsLast();
   const sondagesSkipped = last && ["none", "declined"].includes(last.sondages.status) && cur >= order.indexOf("sondages");
   const rejetSkipped = last && last.rejet && last.rejet.skipped && cur > order.indexOf("rejet");
+  const reportsSkipped = last && last.reports && !last.reports.elec && cur >= order.indexOf("reports");
   document.getElementById("workshopSteps").innerHTML = WS_STEPS.map((st, i) => {
     let cls = i === cur ? "current" : i < cur ? "done" : "";
     if (st.soon) cls = "soon";
-    const isSkipped = (st.key === "sondages" && sondagesSkipped) || (st.key === "rejet" && rejetSkipped);
+    const isSkipped = (st.key === "sondages" && sondagesSkipped) || (st.key === "rejet" && rejetSkipped) || (st.key === "reports" && reportsSkipped);
     if (isSkipped && i !== cur) cls = "skipped";
     const extra = st.soon ? ' <span class="ws-soon">(à venir)</span>' : isSkipped ? ' <span class="ws-soon">(non prise en compte)</span>' : "";
     return `<li class="${cls}"${i === cur ? ' aria-current="step"' : ""}><span class="ws-num">${i + 1}</span>${st.label}${extra}</li>`;
@@ -2459,12 +2543,65 @@ function renderRejet(body) {
     <div class="ws-actions" style="justify-content:flex-start;"><button class="mini-btn" type="button" data-ws="rejet-reset">Revenir au calcul</button></div>
     <div class="ws-actions">
       <button class="secondary ws-left" type="button" data-ws="back-from-rejet">← Retour</button>
-      <button class="primary" type="button" data-ws="to-ponderation" data-needs-valid>Étape suivante →</button>
+      <button class="primary" type="button" data-ws="to-reports" data-needs-valid>Étape suivante →</button>
     </div>`;
   const recalc = () => { computeRejet(w); w.reportEdited = false; renderWorkshop(); };
   body.querySelector("#wsRefEuro").addEventListener("change", e => { r.euroRef = e.target.value || null; recalc(); });
   body.querySelector("#wsRefPres").addEventListener("change", e => { r.presRef = e.target.value || null; recalc(); });
   body.querySelector("#wsRefWeight").addEventListener("change", e => { const v = parseFloat(e.target.value); r.euroWeight = isNaN(v) ? REJET_EURO_DEFAULT_WEIGHT : Math.max(0, Math.min(100, v)); recalc(); });
+  bindReportInputs(body, r.proposal, x, () => { w.reportEdited = false; r.available = Object.values(r.proposal).some(v => v > 0); });
+}
+
+function renderReports(body) {
+  const w = wsLast();
+  const r = w.reports;
+  const x = wsCompute().atWithdrawal[ws.withdrawn.length - 1];
+  const head = wsCtx() + wsTrailHtml() + `<p><strong>${escapeHtml(w.name)}</strong> (${fmtPct(x)}) : que disent les reports de voix observés en 2024 ?</p>`;
+  const elecOpts = `<option value="">— aucun —</option>` + Object.entries(REPORTS_DUELS).map(([k, v]) => `<option value="${k}"${k === r.elec ? " selected" : ""}>${escapeHtml(v.label)}</option>`).join("");
+  const nav = `<div class="ws-actions">
+      <button class="secondary ws-left" type="button" data-ws="back-from-reports">← Retour</button>
+      <button class="primary" type="button" data-ws="to-ponderation" data-needs-valid>Étape suivante →</button>
+    </div>`;
+  if (!r.elec) {
+    body.innerHTML = head + `
+      <div class="ws-question">
+        <p><strong>Pas de mesure 2024 pour cet électorat.</strong> Le tableau Ipsos-Talan ne mesure que les reports des électeurs Ensemble, LR / divers droite et Nouveau Front populaire ; ceux des électeurs RN ne sont pas mesurés.</p>
+        <p>Cette étape n'est donc pas prise en compte pour ce retrait. Vous pouvez néanmoins choisir un électorat proche : <select id="wsReportsElec" aria-label="Électorat de référence 2024">${elecOpts}</select></p>
+      </div>` + nav;
+    body.querySelector("#wsReportsElec").addEventListener("change", e => { r.elec = e.target.value || null; computeReports(w); w.reportEdited = false; renderWorkshop(); });
+    return;
+  }
+  const e = REPORTS_DUELS[r.elec];
+  const campRows = REPORTS_CAMPS.filter(c => !e.own.includes(c.id)).map(c => `<tr><td>${escapeHtml(c.label)}</td><td class="num">${r.attr[c.id] !== undefined ? fmtPct(r.attr[c.id]).replace(",0", "") : "—"}</td><td><span class="hint">${r.estimated[c.id] ? escapeHtml(r.estimated[c.id]) : c.id === "RN" ? "moyenne de sa part dans les duels" : "part obtenue face au RN"}</span></td></tr>`).join("");
+  const ownLabel = e.own.map(id => REPORTS_CAMPS.find(c => c.id === id).label).join(" + ");
+  body.innerHTML = head + `
+    <div class="ws-source">
+      <p class="ws-source-title">Reports 2024 — ${escapeHtml(REPORTS_SOURCE)}</p>
+      <p class="hint" style="margin:0;">Ces chiffres décrivent des duels de second tour face au RN : on les utilise pour orienter les électeurs qui quittent leur camp, et pour estimer la part qui ne se reporte sur personne.</p>
+      <div class="table-scroll"><table class="ws-table">
+        <tbody>
+          <tr><td>Électorat de référence</td><td colspan="2"><select id="wsReportsElec" aria-label="Électorat de référence 2024">${elecOpts}</select></td></tr>
+          <tr><td>Restent dans leur camp (${escapeHtml(ownLabel)})</td>
+              <td class="num"><input class="ws-input" type="number" min="0" max="100" step="5" id="wsReportsFid" value="${r.hasOwn ? r.fidelity : 0}"${r.hasOwn ? "" : " disabled"} aria-label="Part restant dans le camp"> %</td>
+              <td><span class="hint">${r.hasOwn ? `répartis au prorata des scores des candidats du camp ; ${REPORTS_FIDELITY_DEFAULT} % par défaut, calé sur les retraits d'Attal et Philippe mesurés dans les sondages` : "aucun candidat de ce camp ne reste en lice"}</span></td></tr>
+          <tr><td>Parmi ceux qui quittent leur camp, ne se reportent sur personne</td>
+              <td class="num"><input class="ws-input" type="number" min="0" max="100" step="1" id="wsReportsAbst" value="${r.abst}" aria-label="Part d'abstention, blanc et nul"> %</td>
+              <td><span class="hint">abstention, blanc et nul : moyenne mesurée en 2024 pour cet électorat</span></td></tr>
+        </tbody>
+      </table></div>
+      <p style="margin:0; font-size:0.86rem;"><strong>Les autres se répartissent entre les camps selon leur attrait en 2024</strong> (puis, dans chaque camp, au prorata des scores des candidats) :</p>
+      <div class="table-scroll"><table class="ws-table">
+        <thead><tr><th>Camp</th><th class="num">Attrait 2024</th><th>Mesure</th></tr></thead>
+        <tbody>${campRows}</tbody>
+      </table></div>
+    </div>
+    ${reportTableHtml(w, r.proposal, [{ title: "Camp", cell: n => { const c = REPORTS_CAMPS.find(k => k.id === campOf(n)); return c ? `<span class="hint">${escapeHtml(c.label)}</span>` : null; } }], x, "Proposition")}
+    <div class="ws-actions" style="justify-content:flex-start;"><button class="mini-btn" type="button" data-ws="reports-reset">Revenir au calcul</button></div>
+    ${nav}`;
+  const recalc = () => { computeReports(w); w.reportEdited = false; renderWorkshop(); };
+  body.querySelector("#wsReportsElec").addEventListener("change", ev => { r.elec = ev.target.value || null; r.abstAuto = true; recalc(); });
+  body.querySelector("#wsReportsFid").addEventListener("change", ev => { const v = parseFloat(ev.target.value); r.fidelity = isNaN(v) ? REPORTS_FIDELITY_DEFAULT : Math.max(0, Math.min(100, v)); recalc(); });
+  body.querySelector("#wsReportsAbst").addEventListener("change", ev => { const v = parseFloat(ev.target.value); if (!isNaN(v)) { r.abst = Math.max(0, Math.min(100, v)); r.abstAuto = false; } recalc(); });
   bindReportInputs(body, r.proposal, x, () => { w.reportEdited = false; r.available = Object.values(r.proposal).some(v => v > 0); });
 }
 
@@ -2500,7 +2637,7 @@ function renderPonderation(body) {
       title: WS_WEIGHT_ROWS.find(r => r.id === id).label,
       cell: n => srcById[id] && srcById[id].covers(n) ? fmtPct(srcById[id].proposal[n] || 0) : null,
     })),
-    { title: "Reports 2024", cell: () => '<span class="hint">à venir</span>' },
+    { title: "Reports 2024", cell: n => srcById.reports ? fmtPct(srcById.reports.proposal[n] || 0) : null },
   ];
   const weightBlocked = src.length > 0 && usedTotal === 0;
   body.innerHTML = wsCtx() + wsTrailHtml() + `
@@ -2550,6 +2687,7 @@ function renderWorkshop() {
   if (ws.step === "retrait") return renderRetrait(body);
   if (ws.step === "sondages") return renderSondages(body);
   if (ws.step === "rejet") return renderRejet(body);
+  if (ws.step === "reports") return renderReports(body);
   if (ws.step === "ponderation") return renderPonderation(body);
   return renderScenario(body);
 }
@@ -2559,7 +2697,8 @@ function renderWorkshop() {
 function afterSondagesStep(w) {
   const hasCovered = w.others.some(n => REJET_FORTE[n]);
   w.rejet.skipped = !hasCovered;
-  return hasCovered ? "rejet" : "ponderation";
+  if (!hasCovered) computeReports(w);
+  return hasCovered ? "rejet" : "reports";
 }
 
 function handleWorkshopAction(action) {
@@ -2579,6 +2718,7 @@ function handleWorkshopAction(action) {
       const nw = { name: c.name, bloc: c.bloc, score: c.score, others, sondages: { status: "none" }, report: {}, reportEdited: false,
         rejet: { euroRef, presRef, euroWeight: REJET_EURO_DEFAULT_WEIGHT } };
       computeRejet(nw);
+      nw.reports = { elec: reportsDefaultElectorate(c.name), fidelity: REPORTS_FIDELITY_DEFAULT, abstAuto: true };
       ws.withdrawn.push(nw);
       ws.pick = null;
       const inPeriod = findTransferPairs(c.name, {});
@@ -2608,10 +2748,18 @@ function handleWorkshopAction(action) {
     case "back-from-rejet":
       if (w.sondages.status === "declined") w.sondages.status = "pending";
       return wsGo("sondages");
-    case "back-from-ponderation":
+    case "to-reports":
+      computeReports(w); w.reportEdited = false;
+      return wsGo("reports");
+    case "reports-reset":
+      w.reports.abstAuto = true; computeReports(w); w.reportEdited = false;
+      return renderWorkshop();
+    case "back-from-reports":
       if (!w.rejet.skipped) return wsGo("rejet");
       if (w.sondages.status === "declined") w.sondages.status = "pending";
       return wsGo("sondages");
+    case "back-from-ponderation":
+      return wsGo("reports");
     case "sondages-reset":
       w.sondages.proposal = prefillFromShares(w.sondages.shares, w.others);
       w.reportEdited = false;

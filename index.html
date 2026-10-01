@@ -1967,8 +1967,8 @@ makeCardsCollapsible();
 const WS_STEPS = [
   { key: "depart", label: "Point de départ" },
   { key: "retrait", label: "Retrait" },
-  { key: "sondages", label: "Sondages" },
-  { key: "rejet", label: "Rejet" },
+  { key: "sondages", label: "Sondages 2026" },
+  { key: "rejet", label: "Rejets 2026" },
   { key: "reports", label: "Reports 2024", soon: true },
   { key: "proximite", label: "Proximité", soon: true },
   { key: "ponderation", label: "Pondération" },
@@ -2083,16 +2083,16 @@ function useSondagesPairs(w, pairs, scopeLabel) {
 // Poids par défaut quand plusieurs sources sont disponibles (modifiables à l'étape Pondération).
 const WS_DEFAULT_WEIGHTS = { sondages: 60, rejet: 40, reports: 0, proximite: 0 };
 const WS_WEIGHT_ROWS = [
-  { id: "sondages", label: "Sondages" },
-  { id: "rejet", label: "Rejet" },
+  { id: "sondages", label: "Sondages 2026" },
+  { id: "rejet", label: "Rejets 2026" },
   { id: "reports", label: "Reports 2024", soon: true },
   { id: "proximite", label: "Proximité", soon: true },
 ];
 
 function wsSources(w) {
   const src = [];
-  if (w.sondages.status === "period" || w.sondages.status === "latest") src.push({ id: "sondages", label: "Sondages", proposal: w.sondages.proposal, covers: n => true });
-  if (w.rejet && w.rejet.available) src.push({ id: "rejet", label: "Rejet", proposal: w.rejet.proposal, covers: n => n in w.rejet.proposal });
+  if (w.sondages.status === "period" || w.sondages.status === "latest") src.push({ id: "sondages", label: "Sondages 2026", proposal: w.sondages.proposal, covers: n => true });
+  if (w.rejet && w.rejet.available) src.push({ id: "rejet", label: "Rejets 2026", proposal: w.rejet.proposal, covers: n => n in w.rejet.proposal });
   src.forEach(s => { s.weight = ws.weights[s.id] ?? 0; });
   return src;
 }
@@ -2381,7 +2381,7 @@ function renderSondages(body) {
       </div>
       <div class="ws-actions">
         <button class="secondary ws-left" type="button" data-ws="undo">← Annuler ce retrait</button>
-        <button class="primary" type="button" data-ws="after-sondages">Passer à l'étape Rejet →</button>
+        <button class="primary" type="button" data-ws="after-sondages">Passer à l'étape Rejets 2026 →</button>
       </div>`;
     return;
   }

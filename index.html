@@ -2243,14 +2243,15 @@ function wsCtx() {
 // Tableau de répartition éditable (utilisé par la source Sondages et par la Pondération).
 // refCols : colonnes d'information [{ title, cell: n => html|null }] ; valueTitle : titre de la colonne éditable.
 // editable(n) = false : ligne grisée, non modifiable (candidat non couvert par la source).
-function reportTableHtml(w, values, refCols, x, valueTitle, editable) {
+function reportTableHtml(w, values, refCols, x, valueTitle, editable, nameNote) {
   refCols = refCols || [];
   const canEdit = editable || (() => true);
+  const note = nameNote || (() => "");
   const rows = w.others
     .slice()
     .sort((a, b) => (canEdit(b) - canEdit(a)) || ((values[b] || 0) - (values[a] || 0)))
     .map(n => `<tr${canEdit(n) ? "" : ' style="color:var(--muted);"'}>
-      <td><strong>${escapeHtml(n)}</strong></td>
+      <td><strong>${escapeHtml(n)}</strong>${note(n) ? ` <span class="hint">${note(n)}</span>` : ""}</td>
       ${refCols.map(c => `<td class="num">${c.cell(n) ?? '<span class="hint">—</span>'}</td>`).join("")}
       <td class="num">${canEdit(n)
         ? `<input class="ws-input" type="number" min="0" max="100" step="0.1" inputmode="decimal" id="wsv-${escapeHtml(n)}" data-val="${escapeHtml(n)}" value="${values[n] || 0}" aria-label="Part vers ${escapeHtml(n)} en %"> %`
@@ -2266,7 +2267,8 @@ function reportTableHtml(w, values, refCols, x, valueTitle, editable) {
         <tr class="ws-total"><td>Total</td>${blanks}<td class="num" id="wsTotal">${fmtPct(Math.min(total, 100))}</td><td></td></tr>
       </tbody>
     </table></div>
-    <p class="hint ws-err" id="wsReportErr" ${total > 100.05 ? "" : "hidden"}>Le total dépasse 100 % : réduisez certaines valeurs.</p>`;
+    <p class="hint ws-err" id="wsReportErr" ${total > 100.05 ? "" : "hidden"}>Le total dépasse 100 % : réduisez certaines valeurs, ou
+      <button class="mini-btn" type="button" id="wsRescale">ajustez les autres candidats pour revenir à 100 %</button>.</p>`;
 }
 
 function bindReportInputs(body, values, x, onChange) {
@@ -2280,12 +2282,29 @@ function bindReportInputs(body, values, x, onChange) {
     body.querySelectorAll("[data-needs-valid]").forEach(b => { b.disabled = t > 100.05; });
     Object.keys(values).forEach(n => { const cell = body.querySelector(`[data-pts="${CSS.escape(n)}"]`); if (cell) cell.textContent = fmtPts(x * (values[n] || 0) / 100); });
   };
+  const locked = new Set(); // valeurs saisies à la main dans ce tableau
   body.querySelectorAll("[data-val]").forEach(inp => inp.addEventListener("input", () => {
     const v = parseFloat(String(inp.value).replace(",", "."));
-    values[inp.getAttribute("data-val")] = isNaN(v) ? 0 : Math.max(0, Math.min(100, v));
+    const n = inp.getAttribute("data-val");
+    values[n] = isNaN(v) ? 0 : Math.max(0, Math.min(100, v));
+    locked.add(n);
     if (onChange) onChange();
     refresh();
   }));
+  // Réduit proportionnellement les valeurs non saisies à la main pour revenir à 100 %.
+  const btn = body.querySelector("#wsRescale");
+  if (btn) btn.addEventListener("click", () => {
+    const L = [...locked].reduce((a, n) => a + (values[n] || 0), 0);
+    const free = Object.keys(values).filter(n => !locked.has(n) && (values[n] || 0) > 0);
+    const F = free.reduce((a, n) => a + values[n], 0);
+    if (L > 100 || F <= 0) return;
+    free.forEach(n => { values[n] = round1(values[n] * (100 - L) / F); });
+    const t = Object.values(values).reduce((a, b) => a + (b || 0), 0);
+    if (t > 100 && free.length) { const big = free.sort((a, b) => values[b] - values[a])[0]; values[big] = round1(values[big] - (t - 100)); }
+    body.querySelectorAll("[data-val]").forEach(inp => { inp.value = values[inp.getAttribute("data-val")] || 0; });
+    if (onChange) onChange();
+    refresh();
+  });
   refresh();
 }
 
@@ -2393,10 +2412,10 @@ function renderRejet(body) {
         <label for="wsRefWeight">Poids des européennes 2024 <span><input class="ws-input" type="number" min="0" max="100" step="5" id="wsRefWeight" value="${r.euroWeight}"${r.euroRef && r.presRef ? "" : " disabled"}> %</span></label>
       </div>
       <p class="hint" style="margin:0;">Électorat de référence pré-rempli d'après la famille politique ${escapeHtml(deName(w.name))} (approximation, modifiable). Européennes 2024 pondérées à ${REJET_EURO_DEFAULT_WEIGHT} % par défaut : plus récentes, elles collent mieux aux mesures des sondages.</p>
-      ${uncovered.length ? `<p class="hint" style="margin:0;">Non couverts par le baromètre : ${uncovered.map(escapeHtml).join(", ")}. Ils seront couverts par l'étape « Proximité » (à venir) ; d'ici là, seule la mesure des sondages peut leur attribuer des voix.</p>` : ""}
+      ${uncovered.length ? `<p class="hint" style="margin:0;">Non couverts par le baromètre : ${uncovered.map(escapeHtml).join(", ")}. Vous pouvez leur attribuer une part à la main dans le tableau ; l'étape « Proximité » (à venir) les pré-remplira.</p>` : ""}
     </div>
-    ${r.available ? reportTableHtml(w, r.proposal, refCols, x, "Proposition", n => n in r.proposal)
-                  : `<div class="ws-note">Aucun candidat restant n'est couvert par le baromètre pour cet électorat : cette source ne propose rien. Choisissez un autre électorat de référence ou passez à la suite.</div>`}
+    ${r.available ? "" : `<div class="ws-note">Aucun candidat restant n'est couvert par le baromètre pour cet électorat : la proposition est vide. Choisissez un autre électorat de référence, ou saisissez vos propres valeurs.</div>`}
+    ${reportTableHtml(w, r.proposal, refCols, x, "Proposition", null, n => (r.attrait && r.attrait[n]) ? "" : "(non couvert, saisie libre)")}
     <div class="ws-actions" style="justify-content:flex-start;"><button class="mini-btn" type="button" data-ws="rejet-reset">Revenir au calcul</button></div>
     <div class="ws-actions">
       <button class="secondary ws-left" type="button" data-ws="back-from-rejet">← ${["none"].includes(w.sondages.status) ? "Annuler ce retrait" : "Retour"}</button>
@@ -2406,7 +2425,7 @@ function renderRejet(body) {
   body.querySelector("#wsRefEuro").addEventListener("change", e => { r.euroRef = e.target.value || null; recalc(); });
   body.querySelector("#wsRefPres").addEventListener("change", e => { r.presRef = e.target.value || null; recalc(); });
   body.querySelector("#wsRefWeight").addEventListener("change", e => { const v = parseFloat(e.target.value); r.euroWeight = isNaN(v) ? REJET_EURO_DEFAULT_WEIGHT : Math.max(0, Math.min(100, v)); recalc(); });
-  if (r.available) bindReportInputs(body, r.proposal, x, () => { w.reportEdited = false; });
+  bindReportInputs(body, r.proposal, x, () => { w.reportEdited = false; r.available = Object.values(r.proposal).some(v => v > 0); });
 }
 
 function renderPonderation(body) {

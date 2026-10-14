@@ -82,6 +82,7 @@
   .cand-row { display: flex; align-items: center; gap: 8px; padding: 3px 0; font-size: 0.88rem; }
   .cand-row input { width: 15px; height: 15px; cursor: pointer; }
   .cand-row label { cursor: pointer; flex: 1; }
+  .cand-row.cand-secondary label { color: var(--muted); font-weight: 400; }
   .top-actions { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
   .top-actions .mini-btn { font-size: 0.78rem; }
   select, input[type="text"], input[type="file"] {
@@ -1285,6 +1286,8 @@ function switchToMonthMode() {
 }
 
 // Décochés par défaut à l'ouverture, mais toujours sélectionnables manuellement.
+// Candidats peu testés : affichés en retrait (police plus légère) dans la liste.
+const SECONDARY_CANDIDATES = ["Faure", "Royal", "Maurel", "Guedj", "Bardella"];
 const DEFAULT_CHECKED_CANDIDATES = ["Mélenchon", "Arthaud", "Glucksmann", "Tondelier", "Roussel", "Attal", "Philippe", "Retailleau", "Le Pen", "Zemmour", "Dupont-Aignan"];
 const DEFAULT_UNCHECKED_INSTITUTS = ["Cluster17"];
 
@@ -1313,9 +1316,11 @@ function renderCandidateList() {
     header.innerHTML = `<span><span class="bloc-dot" style="background:${color}"></span>${sb}</span>
       <span><button class="mini-btn bloc-all" data-subbloc="${sb}">tous</button> · <button class="mini-btn bloc-none" data-subbloc="${sb}">aucun</button></span>`;
     container.appendChild(header);
-    cands.forEach(c => {
+    // Candidats secondaires en fin de groupe, ordre d'origine conservé sinon.
+    const ordered = cands.filter(c => !SECONDARY_CANDIDATES.includes(c.name)).concat(cands.filter(c => SECONDARY_CANDIDATES.includes(c.name)));
+    ordered.forEach(c => {
       const row = document.createElement("div");
-      row.className = "cand-row";
+      row.className = "cand-row" + (SECONDARY_CANDIDATES.includes(c.name) ? " cand-secondary" : "");
       const checked = state.selectedCandidates.has(c.name) ? "checked" : "";
       const flag = c.subBlocAuto
         ? `<span class="auto-flag" title="Classement « ${sb} » deviné automatiquement lors de l'import Wikipédia (d'après les candidats voisins dans le tableau). À confirmer : corriger si besoin le champ subBloc de ce candidat dans data.json et retirer la ligne subBlocAuto.">⚠︎ à vérifier</span>`

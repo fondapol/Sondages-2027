@@ -272,6 +272,7 @@
           </div>
         </div>
         <div class="institut-list" id="monthList"><label class="chip active"><input type="checkbox" checked=""> Mars 2026</label><label class="chip active"><input type="checkbox" checked=""> Mai 2026</label><label class="chip active"><input type="checkbox" checked=""> Juin 2026</label><label class="chip active"><input type="checkbox" checked=""> Juillet 2026</label><label class="chip active"><input type="checkbox" checked=""> Août 2026</label><label class="chip active"><input type="checkbox" checked=""> Septembre 2026</label></div>
+        <p class="hint" id="periodModeNote" style="margin-bottom:4px;"></p>
         <p class="hint" style="margin-bottom:0;">Décochez un mois pour l'exclure de tous les résultats (moyennes, blocs, tendances, analyse). Le menu au-dessus du graphique « Tendances » règle la même période. Entre parenthèses : nombre de sondages retenus ce mois-là avec les autres filtres.</p>
       </div>
 
@@ -1162,22 +1163,55 @@ function allMonthKeys() {
 }
 
 // --- Période : un seul réglage, partagé entre la carte « Période » et le menu du
-// graphique « Tendances ». Tout ce qui s'affiche (moyennes, blocs, graphique, analyse)
-// suit les mois cochés.
+// graphique « Tendances ». Deux modes :
+//  - période glissante (state.rolling = 1, 2 ou 3) : les N derniers mois jusqu'à
+//    aujourd'hui, de date à date (ex. le 14 octobre : du 14 septembre au 14 octobre) ;
+//  - sélection par mois (state.rolling = null) : les mois cochés dans la carte « Période ».
 
+const MONTH_SHORT = ["janv.", "févr.", "mars", "avr.", "mai", "juin", "juil.", "août", "sept.", "oct.", "nov.", "déc."];
+
+function startOfDay(d) { return new Date(d.getFullYear(), d.getMonth(), d.getDate()); }
+
+// Bornes de la période glissante : [aujourd'hui − N mois ; aujourd'hui].
+function rollingWindow() {
+  if (!state.rolling) return null;
+  const end = startOfDay(new Date());
+  const start = new Date(end);
+  start.setMonth(start.getMonth() - state.rolling);
+  return { start, end };
+}
+
+function inPeriod(p) {
+  const win = rollingWindow();
+  if (win) {
+    const d = pollDateObj(p);
+    return !!d && d >= win.start && d <= win.end;
+  }
+  const mKey = monthKeyOf(p);
+  return !mKey || state.selectedMonths.has(mKey);
+}
+
+function dateKeyOf(d) { return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`; }
+
+// Mois concernés par la période (en mode glissant : mois touchés par la fenêtre).
 function selectedMonthKeys() {
   const all = allMonthKeys();
+  const win = rollingWindow();
+  if (win) {
+    const keys = [];
+    const cur = new Date(win.start.getFullYear(), win.start.getMonth(), 1);
+    while (cur <= win.end) { keys.push(dateKeyOf(cur)); cur.setMonth(cur.getMonth() + 1); }
+    return keys;
+  }
   return [...state.selectedMonths].filter(k => all.includes(k)).sort();
 }
 
-// "all", "1", "2", "3" si la sélection correspond à un préréglage du menu, sinon "custom".
+// "1", "2", "3" (période glissante), "all" (tous les mois cochés) ou "custom".
 function periodPreset() {
+  if (state.rolling) return String(state.rolling);
   const all = allMonthKeys();
   const sel = selectedMonthKeys();
-  if (!sel.length) return "custom";
-  if (sel.length === all.length) return "all";
-  const lastN = all.slice(-sel.length);
-  if (sel.length <= 3 && lastN.every((k, i) => k === sel[i])) return String(sel.length);
+  if (sel.length && sel.length === all.length) return "all";
   return "custom";
 }
 
@@ -1192,32 +1226,36 @@ function monthRangeLabel(keys) {
   return `${monthNameLower(keys[0])} → ${monthNameLower(keys[keys.length - 1])}`;
 }
 
-// Ex. : "le dernier mois (septembre 2026)", "les 2 derniers mois (août 2026 → septembre 2026)".
+function fmtDayLong(d, withYear) { return `${d.getDate() === 1 ? "1er" : d.getDate()} ${MONTH_NAMES[d.getMonth()].toLowerCase()}${withYear ? " " + d.getFullYear() : ""}`; }
+function fmtDayShort(d, withYear) { return `${d.getDate()} ${MONTH_SHORT[d.getMonth()]}${withYear ? " " + d.getFullYear() : ""}`; }
+function rollingRangeLong(win) { return `du ${fmtDayLong(win.start, win.start.getFullYear() !== win.end.getFullYear())} au ${fmtDayLong(win.end, true)}`; }
+function rollingRangeShort(win) { return `${fmtDayShort(win.start, win.start.getFullYear() !== win.end.getFullYear())} → ${fmtDayShort(win.end, true)}`; }
+
+// Ex. : "le dernier mois (du 14 septembre au 14 octobre 2026)", "les 3 derniers mois (…)".
 function periodLabel() {
+  const win = rollingWindow();
+  if (win) return state.rolling === 1 ? `le dernier mois (${rollingRangeLong(win)})` : `les ${state.rolling} derniers mois (${rollingRangeLong(win)})`;
   const sel = selectedMonthKeys();
-  const preset = periodPreset();
   if (!sel.length) return "aucune période";
-  if (preset === "all") return `tout l'historique (${monthRangeLabel(sel)})`;
-  if (preset === "1") return `le dernier mois (${monthNameLower(sel[0])})`;
-  if (preset === "2" || preset === "3") return `les ${preset} derniers mois (${monthRangeLabel(sel)})`;
+  if (periodPreset() === "all") return `tout l'historique (${monthRangeLabel(sel)})`;
   if (sel.length === 1) return `le mois de ${monthNameLower(sel[0])}`;
   return `les ${sel.length} mois sélectionnés (${sel.map(monthNameLower).join(", ")})`;
 }
 
-// Suffixe court pour les titres de cartes : "Septembre 2026", "2 derniers mois (août 2026 → septembre 2026)"…
+// Suffixe court pour les titres de cartes : "dernier mois (14 sept. → 14 oct. 2026)", "Septembre 2026"…
 function periodTitleSuffix() {
+  const win = rollingWindow();
+  if (win) return `${state.rolling === 1 ? "dernier mois" : state.rolling + " derniers mois"} (${rollingRangeShort(win)})`;
   const sel = selectedMonthKeys();
-  const preset = periodPreset();
   if (!sel.length) return "aucun mois sélectionné";
   if (sel.length === 1) return monthLabelOf(sel[0]);
-  if (preset === "all") return `tout l'historique (${monthRangeLabel(sel)})`;
-  if (preset === "2" || preset === "3") return `${preset} derniers mois (${monthRangeLabel(sel)})`;
+  if (periodPreset() === "all") return `tout l'historique (${monthRangeLabel(sel)})`;
   return `${sel.length} mois sélectionnés`;
 }
 
 // Jusqu'à 3 mois : un point par semaine ; au-delà : un point par mois.
 function useWeeklyBuckets() {
-  return selectedMonthKeys().length <= 3;
+  return state.rolling ? true : selectedMonthKeys().length <= 3;
 }
 
 function syncPeriodSelect() {
@@ -1227,15 +1265,23 @@ function syncPeriodSelect() {
   const customOpt = sel.querySelector('option[value="custom"]');
   if (customOpt) {
     customOpt.hidden = preset !== "custom";
-    customOpt.textContent = selectedMonthKeys().length ? `Mois sélectionnés (${selectedMonthKeys().length})` : "Aucun mois sélectionné";
+    const n = selectedMonthKeys().length;
+    customOpt.textContent = n ? `Mois sélectionnés (${n})` : "Aucun mois sélectionné";
   }
   sel.value = preset;
 }
 
 function applyPeriodPreset(value) {
+  if (value === "all") { state.rolling = null; state.selectedMonths = new Set(allMonthKeys()); }
+  else if (/^\d+$/.test(value)) state.rolling = parseInt(value, 10);
+}
+
+// Passage en sélection par mois à partir de la période glissante en cours (mois touchés).
+function switchToMonthMode() {
+  if (!state.rolling) return;
   const all = allMonthKeys();
-  if (value === "all") state.selectedMonths = new Set(all);
-  else if (/^\d+$/.test(value)) state.selectedMonths = new Set(all.slice(-parseInt(value, 10)));
+  state.selectedMonths = new Set(selectedMonthKeys().filter(k => all.includes(k)));
+  state.rolling = null;
 }
 
 // Décochés par défaut à l'ouverture, mais toujours sélectionnables manuellement.
@@ -1329,14 +1375,23 @@ function renderMonthList() {
   container.innerHTML = "";
   const counts = {};
   dataset.polls.forEach(p => { if (pollPassesFilters(p, { ignoreMonths: true })) { const k = monthKeyOf(p); counts[k] = (counts[k] || 0) + 1; } });
+  const note = document.getElementById("periodModeNote");
+  if (note) {
+    const win = rollingWindow();
+    note.innerHTML = win
+      ? `<strong>Période glissante :</strong> ${state.rolling === 1 ? "le dernier mois" : `les ${state.rolling} derniers mois`}, ${rollingRangeLong(win)}. Les mois touchés sont cochés ; cocher ou décocher un mois passe en sélection mois par mois.`
+      : "<strong>Sélection par mois :</strong> seuls les mois cochés sont pris en compte.";
+  }
+  const rollingKeys = state.rolling ? new Set(selectedMonthKeys()) : null;
   allMonthKeys().forEach(key => {
-    const active = state.selectedMonths.has(key);
+    const active = rollingKeys ? rollingKeys.has(key) : state.selectedMonths.has(key);
     const n = counts[key] || 0;
     const chip = document.createElement("label");
     chip.className = "chip" + (active ? " active" : "") + (n === 0 ? " empty" : "");
     if (n === 0) chip.title = "Aucun sondage de ce mois ne correspond aux autres filtres (instituts, candidats).";
     chip.innerHTML = `<input type="checkbox" ${active ? "checked" : ""}> ${monthLabelOf(key)} <span class="chip-count">(${n})</span>`;
     chip.querySelector("input").addEventListener("change", (e) => {
+      switchToMonthMode(); // cocher/décocher un mois passe en sélection par mois
       if (e.target.checked) state.selectedMonths.add(key); else state.selectedMonths.delete(key);
       chip.classList.toggle("active", e.target.checked);
       render();
@@ -1350,10 +1405,7 @@ function renderMonthList() {
 // compter, sur les pastilles, combien de sondages chaque mois / institut apporterait.
 function pollPassesFilters(p, opts = {}) {
   if (!opts.ignoreInstituts && p.institut && !state.selectedInstituts.has(p.institut)) return false;
-  if (!opts.ignoreMonths) {
-    const mKey = monthKeyOf(p);
-    if (mKey && !state.selectedMonths.has(mKey)) return false;
-  }
+  if (!opts.ignoreMonths && !inPeriod(p)) return false;
   const search = state.hypSearch.trim().toLowerCase();
   if (search && !p.hypothese.toLowerCase().includes(search) && !p.institut.toLowerCase().includes(search)) return false;
   if (state.excludeUnselected && !opts.ignoreCandidates) {
@@ -1796,10 +1848,12 @@ document.getElementById("selNone").addEventListener("click", () => {
   renderCandidateList(); render();
 });
 document.getElementById("monthAll").addEventListener("click", () => {
+  state.rolling = null;
   state.selectedMonths = new Set(allMonthKeys());
   renderMonthList(); render();
 });
 document.getElementById("monthNone").addEventListener("click", () => {
+  state.rolling = null;
   state.selectedMonths.clear();
   renderMonthList(); render();
 });
@@ -1942,6 +1996,7 @@ REF_2022 = dataset.referenceRows.find(r => /2022/.test(r.hypothese)) || null;
   selectedCandidates: new Set(dataset.candidates.map(c => c.name).filter(n => DEFAULT_CHECKED_CANDIDATES.includes(n))),
   selectedInstituts: new Set([...new Set(dataset.polls.map(p => p.institut))].filter(i => !DEFAULT_UNCHECKED_INSTITUTS.includes(i))),
   selectedMonths: new Set(allMonthKeys().slice(-1)),
+  rolling: 1, // à l'ouverture : le dernier mois glissant, jusqu'à aujourd'hui
   hypSearch: "",
   excludeUnselected: true,
   chartMode: "bloc",

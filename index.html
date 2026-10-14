@@ -1316,7 +1316,9 @@ function renderCandidateList() {
     header.innerHTML = `<span><span class="bloc-dot" style="background:${color}"></span>${sb}</span>
       <span><button class="mini-btn bloc-all" data-subbloc="${sb}">tous</button> · <button class="mini-btn bloc-none" data-subbloc="${sb}">aucun</button></span>`;
     container.appendChild(header);
-    cands.forEach(c => {
+    // Candidats secondaires en fin de groupe, ordre d'origine conservé sinon.
+    const ordered = cands.filter(c => !SECONDARY_CANDIDATES.includes(c.name)).concat(cands.filter(c => SECONDARY_CANDIDATES.includes(c.name)));
+    ordered.forEach(c => {
       const row = document.createElement("div");
       row.className = "cand-row" + (SECONDARY_CANDIDATES.includes(c.name) ? " cand-secondary" : "");
       const checked = state.selectedCandidates.has(c.name) ? "checked" : "";

@@ -180,6 +180,40 @@ def candidate_signature(scores):
     return "|".join(names)
 
 
+DUPLICATE_WINDOW_DAYS = 10
+
+
+def poll_day(date_str):
+    try:
+        m, d, y = (int(x) for x in date_str.split("/"))
+        return datetime(2000 + y if y < 100 else y, m, d)
+    except (ValueError, AttributeError):
+        return None
+
+
+def same_scores(a, b):
+    ka = {k: v for k, v in a.items() if v is not None}
+    kb = {k: v for k, v in b.items() if v is not None}
+    return ka.keys() == kb.keys() and all(abs(float(ka[k]) - float(kb[k])) < 1e-9 for k in ka)
+
+
+def is_duplicate(institut, date_str, scores, polls):
+    """Doublon : même institut et même hypothèse (mêmes candidats) à la même date,
+    OU mêmes scores exacts à quelques jours près (le même sondage peut être daté du
+    début de terrain d'un côté et de la fin de terrain de l'autre)."""
+    sig = candidate_signature(scores)
+    day = poll_day(date_str)
+    for p in polls:
+        if p["institut"].lower() != institut.lower():
+            continue
+        if p["date"] == date_str and candidate_signature(p["scores"]) == sig:
+            return True
+        other = poll_day(p["date"])
+        if day and other and abs((day - other).days) <= DUPLICATE_WINDOW_DAYS and same_scores(scores, p["scores"]):
+            return True
+    return False
+
+
 def next_hypothesis_number(polls):
     max_n = 0
     for p in polls:
@@ -384,14 +418,7 @@ def main():
         if not any_score:
             continue
 
-        sig = candidate_signature(scores)
-        already_exists = any(
-            p["institut"].lower() == current_institut.lower()
-            and p["date"] == current_date
-            and candidate_signature(p["scores"]) == sig
-            for p in (data["polls"] + new_polls)
-        )
-        if already_exists:
+        if is_duplicate(current_institut, current_date, scores, data["polls"] + new_polls):
             continue
 
         bloc_sums = {"BLOC GAUCHE": 0, "CENTRE": 0, "BLOC DROITE": 0}

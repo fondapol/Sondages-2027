@@ -55,7 +55,7 @@ NAME_MAP = {
     "Marine Tondelier": "Tondelier",
     "Gabriel Attal": "Attal",
     "Édouard Philippe": "Philippe",
-    "Dominique de Villepin": "de Villepin",
+    "Dominique de Villepin": "Villepin",
     "Bruno Retailleau": "Retailleau",
     "Nicolas Dupont-Aignan": "Dupont-Aignan",
     "Marine Le Pen": "Le Pen",

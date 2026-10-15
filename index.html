@@ -1577,7 +1577,7 @@ function renderChart(polls) {
   emptyHint.style.display = "none";
 
   const subHint = document.getElementById("chartSubHint");
-  subHint.textContent = `Moyenne ${useWeeklyBuckets() ? "hebdomadaire" : "mensuelle"} sur ${periodLabel()}, avec les mêmes filtres (candidats, instituts, mode de simulation) que le reste de la page.`;
+  subHint.textContent = `Moyenne ${useWeeklyBuckets() ? "hebdomadaire" : "mensuelle"} sur ${periodLabel()}, avec les mêmes filtres (candidats, instituts, mode de simulation) que le reste de la page. Échelle fixe à partir de 0 %, pour comparer les évolutions à la même mesure.`;
 
   const datasets = series.map(s => ({
     label: s.label,
@@ -1589,10 +1589,20 @@ function renderChart(polls) {
     pointRadius: 3,
   }));
 
+  // Échelle fixe, partant de 0 : le même écart de points a la même hauteur quels que
+  // soient les candidats ou la période affichés. Plafond par vue, relevé par paliers
+  // de 5 points seulement si une valeur le dépasse.
+  const Y_MAX_BY_VIEW = { candidat: 40, bloc: 60, sousbloc: 50 };
+  const view = state.chartMode === "bloc" ? (state.subdivideBloc ? "sousbloc" : "bloc") : "candidat";
+  const dataMax = Math.max(0, ...series.flatMap(s => s.data.filter(v => v !== null && v !== undefined)));
+  const yMax = Math.max(Y_MAX_BY_VIEW[view], Math.ceil(dataMax / 5) * 5);
+  const yScale = { min: 0, max: yMax, title: { display: true, text: "%" }, ticks: { stepSize: 5, callback: v => v + "%" } };
+
   try {
     if (trendChartInstance) {
       trendChartInstance.data.labels = labels;
       trendChartInstance.data.datasets = datasets;
+      trendChartInstance.options.scales.y = yScale;
       trendChartInstance.update();
     } else {
       trendChartInstance = new Chart(canvas.getContext("2d"), {
@@ -1602,7 +1612,7 @@ function renderChart(polls) {
           responsive: true,
           interaction: { mode: "index", intersect: false },
           plugins: { legend: { position: "bottom", labels: { boxWidth: 12, font: { size: 11 } } } },
-          scales: { y: { title: { display: true, text: "%" }, ticks: { callback: v => v + "%" } } }
+          scales: { y: yScale }
         }
       });
     }

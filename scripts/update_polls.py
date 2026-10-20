@@ -132,7 +132,7 @@ def infer_classification(col_index, ordered_names, candidates_by_name):
     return bloc, sub_bloc, confident
 
 
-def write_pr_notes(newly_created, known_candidates):
+def write_pr_notes(newly_created, known_candidates, skipped_rows=()):
     """Écrit un résumé Markdown (candidats créés / à vérifier) dans le fichier indiqué
     par PR_NOTES_FILE, repris dans la description de la Pull Request automatique."""
     path = os.environ.get("PR_NOTES_FILE")
@@ -156,6 +156,11 @@ def write_pr_notes(newly_created, known_candidates):
         lines.append("Pour confirmer ou corriger : dans `data.json`, ajuster le champ `subBloc` du candidat "
                      "(Gauche radicale, Gauche classique, Centre gauche, Centre droit, Droite classique, "
                      "Divers droite, Droite radicale) et supprimer la ligne `\"subBlocAuto\": true`.")
+        lines.append("")
+    if skipped_rows:
+        lines.append("### ⚠️ Lignes écartées (tableau Wikipédia mal lu, colonnes décalées)")
+        lines.append("")
+        lines.append(", ".join(skipped_rows) + " — à vérifier et à saisir à la main si besoin.")
         lines.append("")
     with open(path, "w", encoding="utf-8") as f:
         f.write("\n".join(lines))
@@ -351,7 +356,15 @@ def main():
         print(f"[diag] 5 premiers instituts : {df['Polling firm'].head(5).tolist()}")
 
     header = list(df.columns)
-    candidate_cols = [c for c in header if c not in ("Polling firm", "Fieldwork date", "Sample size")]
+    # Colonnes sans vrai nom de candidat (ex. « Unnamed: 21_level_0 » créée par pandas
+    # pour une cellule fusionnée, « Lead », « Others ») : jamais traitées comme candidat.
+    NON_CANDIDATE = re.compile(r"unnamed|_level_\d|^\s*\d*\s*$|^(lead|others?|abst\w*|blank|none|n/?a)\b", re.IGNORECASE)
+    other_cols = [c for c in header if c not in ("Polling firm", "Fieldwork date", "Sample size")]
+    junk_cols = [c for c in other_cols if NON_CANDIDATE.search(str(c))]
+    candidate_cols = [c for c in other_cols if c not in junk_cols]
+    if junk_cols:
+        print(f"[info] Colonnes ignorées (pas des candidats) : {junk_cols}")
+    skipped_rows = []
 
     candidates_by_name = {c["name"]: c for c in known_candidates}
     resolved_names = []
@@ -405,6 +418,13 @@ def main():
         if not current_institut or not current_date:
             continue
 
+        # Une valeur dans une colonne sans nom signale une ligne décalée (cellules
+        # fusionnées mal lues) : on l'écarte plutôt que d'importer des scores faux.
+        if any(parse_percent(str(row.get(c, ""))) is not None for c in junk_cols):
+            skipped_rows.append(f"{current_institut} ({current_date})")
+            print(f"::warning::Ligne écartée (colonnes décalées) : {current_institut} {current_date}")
+            continue
+
         scores = {}
         for c in known_names:
             scores[c] = None
@@ -447,7 +467,7 @@ def main():
             "source": "wikipedia-auto",
         })
 
-    write_pr_notes(newly_created, known_candidates)
+    write_pr_notes(newly_created, known_candidates, skipped_rows)
 
     if not new_polls and not newly_created:
         print("Aucun nouveau sondage détecté.")

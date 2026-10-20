@@ -155,7 +155,7 @@ def write_pr_notes(newly_created, known_candidates, skipped_rows=()):
         lines.append("")
         lines.append("Pour confirmer ou corriger : dans `data.json`, ajuster le champ `subBloc` du candidat "
                      "(Gauche radicale, Gauche classique, Centre gauche, Centre droit, Droite classique, "
-                     "Divers droite, Droite radicale) et supprimer la ligne `\"subBlocAuto\": true`.")
+                     "Divers droite, Droite radicale, Divers) et supprimer la ligne `\"subBlocAuto\": true`.")
         lines.append("")
     if skipped_rows:
         lines.append("### ⚠️ Lignes écartées (tableau Wikipédia mal lu, colonnes décalées)")

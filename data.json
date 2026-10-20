@@ -132,9 +132,8 @@
   },
   {
    "name": "Polony",
-   "bloc": "BLOC GAUCHE",
-   "subBloc": "Gauche classique",
-   "subBlocAuto": true
+   "bloc": "DIVERS",
+   "subBloc": "Divers"
   }
  ],
  "polls": [
@@ -6433,9 +6432,9 @@
     "Maurel": null
    },
    "blocSums": {
-    "BLOC GAUCHE": 37.0,
-    "CENTRE": 16.5,
-    "BLOC DROITE": 46.5
+    "BLOC DROITE": 46.5,
+    "BLOC GAUCHE": 35.5,
+    "CENTRE": 16.5
    },
    "sample": 1701,
    "registered": null,

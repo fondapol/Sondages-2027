@@ -112,6 +112,7 @@
   .tag-gauche { background: var(--gauche); }
   .tag-centre { background: var(--centre); }
   .tag-droite { background: var(--droite); }
+  .tag-divers { background: #7a6aa8; }
   .summary-row { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 6px; }
   .summary-box { flex: 1; min-width: 120px; border: 1px solid var(--border); border-radius: 10px; padding: 10px 14px; border-left-width: 4px; }
   .summary-box.bloc-gauche { border-left-color: var(--gauche); }
@@ -311,6 +312,7 @@
               <option value="Droite classique">Droite classique</option>
               <option value="Divers droite">Divers droite</option>
               <option value="Droite radicale">Droite radicale</option>
+              <option value="Divers">Divers (hors gauche-droite)</option>
               <option value="Non classé">Non classé (à classer plus tard)</option>
             </select>
           </div>
@@ -761,8 +763,8 @@
 </div>
 
 <script>
-const BLOC_CLASS = { "BLOC GAUCHE": "gauche", "CENTRE": "centre", "BLOC DROITE": "droite" };
-const BLOC_LABEL = { "BLOC GAUCHE": "Gauche", "CENTRE": "Centre", "BLOC DROITE": "Droite" };
+const BLOC_CLASS = { "BLOC GAUCHE": "gauche", "CENTRE": "centre", "BLOC DROITE": "droite", "DIVERS": "divers" };
+const BLOC_LABEL = { "BLOC GAUCHE": "Gauche", "CENTRE": "Centre", "BLOC DROITE": "Droite", "DIVERS": "Divers" };
 
 let dataset = null;
 
@@ -799,7 +801,9 @@ let SUB_BLOC = {
 // à un nouveau candidat ajouté et classé via le formulaire d'être correctement classé
 // pour TOUS les visiteurs dès que le data.json est republié — sans retoucher ce fichier.
 const SUB_BLOC_ORDER = ["Gauche radicale", "Gauche classique", "Centre gauche", "Centre droit", "Droite classique", "Divers droite", "Droite radicale"];
-const SUB_BLOC_DISPLAY_ORDER = SUB_BLOC_ORDER.concat(["Non classé"]);
+// « Divers » : candidats hors de l'axe gauche-droite (ex. Polony) ; affichés à part,
+// non comptés dans les blocs gauche / centre / droite ni dans la proximité.
+const SUB_BLOC_DISPLAY_ORDER = SUB_BLOC_ORDER.concat(["Divers", "Non classé"]);
 const SUB_BLOC_COLOR = {
   "Gauche radicale": "#a5231e",
   "Gauche classique": "#e0473e",
@@ -808,6 +812,7 @@ const SUB_BLOC_COLOR = {
   "Droite classique": "#5b8fe0",
   "Divers droite": "#3a5fc7",
   "Droite radicale": "#1c3f99",
+  "Divers": "#7a6aa8",
   "Non classé": "#8a8f99"
 };
 const SUB_BLOC_TO_BLOC = {
@@ -817,7 +822,8 @@ const SUB_BLOC_TO_BLOC = {
   "Centre droit": "CENTRE",
   "Droite classique": "BLOC DROITE",
   "Divers droite": "BLOC DROITE",
-  "Droite radicale": "BLOC DROITE"
+  "Droite radicale": "BLOC DROITE",
+  "Divers": "DIVERS"
 };
 
 function subBlocOf(name, bloc) {

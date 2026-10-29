@@ -249,6 +249,7 @@
   .legend-item.off { color: var(--muted); }
   .legend-actions { color: var(--muted); }
   /* Derniers sondages ajoutés */
+  .recent-section { margin: 14px 0 4px; font-size: 0.78rem; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.03em; }
   .recent-month { border-top: 1px solid var(--border); padding: 8px 0; }
   .recent-month > summary { cursor: pointer; font-size: 0.9rem; }
   .recent-list { display: flex; flex-direction: column; margin-top: 6px; }
@@ -349,9 +350,15 @@
           <input type="text" id="newPollInstitut" list="institutSuggest" placeholder="ex : Ifop">
           <datalist id="institutSuggest"></datalist>
         </div>
-        <div class="field">
-          <label>Date du sondage (fin de terrain)</label>
-          <input type="date" id="newPollDate">
+        <div style="display:flex; gap:10px;">
+          <div class="field" style="flex:1;">
+            <label>Début de terrain (optionnel)</label>
+            <input type="date" id="newPollStart">
+          </div>
+          <div class="field" style="flex:1;">
+            <label>Fin de terrain</label>
+            <input type="date" id="newPollDate">
+          </div>
         </div>
         <div style="display:flex; gap:10px;">
           <div class="field" style="flex:1;">
@@ -1064,6 +1071,7 @@ function handleAddPoll() {
   const institut = document.getElementById("newPollInstitut").value.trim();
   const dateVal = document.getElementById("newPollDate").value;
   const date = parseFrenchDateInput(dateVal);
+  const debut = parseFrenchDateInput(document.getElementById("newPollStart").value);
   const sampleRaw = document.getElementById("newPollSample").value.trim();
   const registeredRaw = document.getElementById("newPollRegistered").value.trim();
   const sample = sampleRaw ? parseInt(sampleRaw.replace(/[^\d]/g, ""), 10) : null;
@@ -1110,7 +1118,7 @@ function handleAddPoll() {
   const poll = {
     cle: "", hypothese: hyp, institut, date, isReal: true,
     scores, blocSums: finalBlocSums, sample, registered: registered ?? null,
-    isManual: true, ajoute: todayStr()
+    isManual: true, ajoute: todayStr(), ...(debut && debut !== date ? { debut } : {})
   };
 
   dataset.polls.push(poll);
@@ -1119,6 +1127,7 @@ function handleAddPoll() {
 
   document.getElementById("newPollInstitut").value = "";
   document.getElementById("newPollDate").value = "";
+  document.getElementById("newPollStart").value = "";
   document.getElementById("newPollSample").value = "";
   document.getElementById("newPollRegistered").value = "";
   document.querySelectorAll('#newPollScoreGrid [data-score-cand]').forEach(inp => inp.value = "");
@@ -1597,24 +1606,47 @@ function renderRecentPolls() {
   const waves = new Map();
   dataset.polls.forEach((p, idx) => {
     const k = p.institut + "|" + p.date + "|" + (p.isManual ? "m" : "");
-    if (!waves.has(k)) waves.set(k, { institut: p.institut, date: p.date, sample: p.sample, polls: [], idx, ajoute: p.ajoute || null, source: p.source || "", isManual: !!p.isManual });
+    if (!waves.has(k)) waves.set(k, { institut: p.institut, date: p.date, debut: p.debut || null, sample: p.sample, polls: [], idx, ajoute: p.ajoute || null, source: p.source || "", isManual: !!p.isManual });
     const w = waves.get(k);
     w.polls.push(p); w.idx = Math.max(w.idx, idx);
     if (p.ajoute && (!w.ajoute || p.ajoute > w.ajoute)) w.ajoute = p.ajoute;
+    if (p.debut && !w.debut) w.debut = p.debut;
   });
+  // Les sondages déjà présents à la mise en ligne de l'outil (première date d'ajout)
+  // n'ont pas d'ordre d'ajout significatif : ils sont classés par mois de terrain.
+  const launch = dataset.polls.reduce((m, p) => p.ajoute && (!m || p.ajoute < m) ? p.ajoute : m, null);
+  const isLaunch = w => !w.isManual && w.ajoute === launch;
+  const endKey = w => { const d = parsePollDate(w.date); return d ? d.year * 10000 + d.month * 100 + d.day : 0; };
   const list = [...waves.values()].sort((a, b) =>
-    (b.isManual - a.isManual) || ((b.ajoute || "") > (a.ajoute || "") ? 1 : (b.ajoute || "") < (a.ajoute || "") ? -1 : b.idx - a.idx));
-  const monthOf = w => w.isManual ? "local" : (w.ajoute ? w.ajoute.slice(0, 7) : "inconnu");
+    (b.isManual - a.isManual) || (isLaunch(a) - isLaunch(b)) ||
+    (isLaunch(a) ? endKey(b) - endKey(a) || b.idx - a.idx
+      : (b.ajoute || "") > (a.ajoute || "") ? 1 : (b.ajoute || "") < (a.ajoute || "") ? -1 : b.idx - a.idx));
+  const monthOf = w => {
+    if (w.isManual) return "local";
+    if (isLaunch(w)) { const d = parsePollDate(w.date); return d ? `t${d.year}-${String(d.month).padStart(2, "0")}` : "inconnu"; }
+    return w.ajoute ? w.ajoute.slice(0, 7) : "inconnu";
+  };
   const groups = [];
   list.forEach(w => { const m = monthOf(w); let g = groups.find(x => x.m === m); if (!g) groups.push(g = { m, waves: [] }); g.waves.push(w); });
-  const monthTitle = m => m === "local" ? "Ajoutés dans ce navigateur, pas encore publiés" : m === "inconnu" ? "Date d'ajout inconnue" : monthLabelOf(m);
-  const terrain = str => { const d = parsePollDate(str); return d ? `${d.day} ${MONTH_SHORT[d.month - 1]} ${d.year}` : str; };
-  box.innerHTML = groups.map((g, gi) => `
+  const monthTitle = m => m === "local" ? "Ajoutés dans ce navigateur, pas encore publiés" : m === "inconnu" ? "Date inconnue" : monthLabelOf(m.replace(/^t/, ""));
+  const fmt = (d, withYear) => `${d.day === 1 ? "1er" : d.day} ${MONTH_SHORT[d.month - 1]}${withYear ? " " + d.year : ""}`;
+  const terrain = w => {
+    const e = parsePollDate(w.date);
+    if (!e) return w.date;
+    const s = w.debut && parsePollDate(w.debut);
+    if (!s || (s.day === e.day && s.month === e.month && s.year === e.year)) return w.debut ? `le ${fmt(e, true)}` : `jusqu'au ${fmt(e, true)}`;
+    if (s.month === e.month && s.year === e.year) return `du ${s.day === 1 ? "1er" : s.day} au ${fmt(e, true)}`;
+    return `du ${fmt(s, s.year !== e.year)} au ${fmt(e, true)}`;
+  };
+  const launchLabel = launch ? (() => { const [y, mo, d] = launch.split("-").map(Number); return `${d} ${MONTH_SHORT[mo - 1]} ${y}`; })() : "";
+  let launchHeaderDone = false;
+  box.innerHTML = groups.map((g, gi) => (g.m.startsWith("t") && !launchHeaderDone && (launchHeaderDone = true)
+      ? `<p class="recent-section">Déjà présents à la mise en ligne de l'outil (${launchLabel}), classés par mois de terrain</p>` : "") + `
     <details class="recent-month">
       <summary><strong>${escapeHtml(monthTitle(g.m))}</strong> <span class="hint">· ${g.waves.length} sondage${g.waves.length > 1 ? "s" : ""}</span></summary>
       <div class="recent-list">
         ${g.waves.map(w => `
-          <div class="recent-wave"><span class="recent-inst">${escapeHtml(w.institut)}</span><span class="recent-meta">terrain jusqu'au ${terrain(w.date)}</span></div>`).join("")}
+          <div class="recent-wave"><span class="recent-inst">${escapeHtml(w.institut)}</span><span class="recent-meta">terrain ${terrain(w)}</span></div>`).join("")}
       </div>
     </details>`).join("") || '<p class="hint">Aucun sondage.</p>';
 }

@@ -132,7 +132,7 @@ def infer_classification(col_index, ordered_names, candidates_by_name):
     return bloc, sub_bloc, confident
 
 
-def write_pr_notes(newly_created, known_candidates, skipped_rows=()):
+def write_pr_notes(newly_created, known_candidates, skipped_rows=(), filled_starts=0):
     """Écrit un résumé Markdown (candidats créés / à vérifier) dans le fichier indiqué
     par PR_NOTES_FILE, repris dans la description de la Pull Request automatique."""
     path = os.environ.get("PR_NOTES_FILE")
@@ -161,6 +161,11 @@ def write_pr_notes(newly_created, known_candidates, skipped_rows=()):
         lines.append("### ⚠️ Lignes écartées (tableau Wikipédia mal lu, colonnes décalées)")
         lines.append("")
         lines.append(", ".join(skipped_rows) + " — à vérifier et à saisir à la main si besoin.")
+        lines.append("")
+    if filled_starts:
+        lines.append(f"### 📅 Dates de début de terrain complétées depuis Wikipédia : {filled_starts} sondage(s)")
+        lines.append("")
+        lines.append("Seul le champ `debut` est ajouté à ces sondages ; leurs scores ne changent pas.")
         lines.append("")
     with open(path, "w", encoding="utf-8") as f:
         f.write("\n".join(lines))
@@ -284,6 +289,22 @@ def parse_date_range(cell, ref_year_hint=None):
     return f"{mon_num}/{int(day)}/{str(year)[2:]}"
 
 
+def parse_start_date(cell):
+    """Début de terrain (M/J/AA) d'une cellule « 13–14 Oct 2026 » ou « 28 Sep – 2 Oct 2026 ».
+    Renvoie None si la cellule ne contient qu'une seule date ou n'est pas lisible."""
+    cell = (cell or "").strip()
+    months = {"jan": 1, "feb": 2, "mar": 3, "apr": 4, "may": 5, "jun": 6,
+              "jul": 7, "aug": 8, "sep": 9, "oct": 10, "nov": 11, "dec": 12}
+    m = re.search(r"^(\d{1,2})(?:\s+([A-Za-z]{3})[a-z]*)?(?:\s+(\d{4}))?\s*[-–—]\s*(\d{1,2})\s+([A-Za-z]{3})[a-z]*\s+(\d{4})\s*$", cell)
+    if not m:
+        return None
+    d1, mon1, y1, _, mon2, y2 = m.groups()
+    mon = months.get((mon1 or mon2).lower()[:3])
+    if not mon:
+        return None
+    return f"{mon}/{int(d1)}/{str(y1 or y2)[2:]}"
+
+
 def fetch_wikipedia_table():
     import io
     import pandas as pd
@@ -399,7 +420,8 @@ def main():
             print(f"  - {wiki_name} -> {name} ({bloc} / {sub_bloc}){flag} — à vérifier")
 
     new_polls = []
-    current_institut, current_date, current_sample = None, None, None
+    current_institut, current_date, current_sample, current_start = None, None, None, None
+    filled_starts = 0
 
     for _, row in df.iterrows():
         firm = str(row.get("Polling firm", "")).strip()
@@ -414,7 +436,15 @@ def main():
         if firm and firm.lower() != "nan":
             current_institut = firm
             current_date = parse_date_range(field)
+            current_start = parse_start_date(field) or current_date  # terrain sur un seul jour : début = fin
             current_sample = parse_sample(sample_raw)
+            # Complète la date de début des sondages déjà présents (même institut, même fin de terrain).
+            if current_date and current_start:
+                for p in data["polls"]:
+                    if (not p.get("debut") and p.get("date") == current_date
+                            and p.get("institut", "").lower() == current_institut.lower()):
+                        p["debut"] = current_start
+                        filled_starts += 1
         if not current_institut or not current_date:
             continue
 
@@ -466,11 +496,14 @@ def main():
             "registered": None,
             "source": "wikipedia-auto",
             "ajoute": datetime.now().strftime("%Y-%m-%d"),
+            **({"debut": current_start} if current_start else {}),
         })
 
-    write_pr_notes(newly_created, known_candidates, skipped_rows)
+    write_pr_notes(newly_created, known_candidates, skipped_rows, filled_starts)
+    if filled_starts:
+        print(f"{filled_starts} date(s) de début de terrain complétée(s).")
 
-    if not new_polls and not newly_created:
+    if not new_polls and not newly_created and not filled_starts:
         print("Aucun nouveau sondage détecté.")
         return
 

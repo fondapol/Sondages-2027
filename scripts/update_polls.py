@@ -465,6 +465,7 @@ def main():
             "sample": current_sample,
             "registered": None,
             "source": "wikipedia-auto",
+            "ajoute": datetime.now().strftime("%Y-%m-%d"),
         })
 
     write_pr_notes(newly_created, known_candidates, skipped_rows)

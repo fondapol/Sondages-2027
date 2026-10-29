@@ -236,6 +236,26 @@
   .ws-refs { display: flex; flex-wrap: wrap; gap: 10px 16px; font-size: 0.82rem; }
   .ws-refs label { display: flex; flex-direction: column; gap: 4px; color: var(--muted); font-weight: 600; min-width: 0; }
   .ws-refs select { padding: 5px 8px; border: 1px solid var(--border); border-radius: 6px; font: inherit; color: var(--text); background: var(--card); max-width: 100%; }
+  /* Légende cochable du graphique Tendances */
+  .chart-legend { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px 14px; align-items: center; font-size: 0.8rem; margin: 8px 0 2px; }
+  .legend-item { display: inline-flex; align-items: center; gap: 5px; cursor: pointer; user-select: none; }
+  /* case à cocher = carré de couleur de la courbe (plein et coché, ou vide si masquée) */
+  .legend-item input { position: absolute; opacity: 0; width: 1px; height: 1px; pointer-events: none; }
+  .legend-swatch { position: relative; display: inline-block; width: 14px; height: 14px; border-radius: 3px; border: 2px solid var(--c); background: var(--c); box-sizing: border-box; }
+  .legend-swatch::after { content: ""; position: absolute; left: 3px; top: 0px; width: 4px; height: 7px; border: solid #fff; border-width: 0 2px 2px 0; transform: rotate(45deg); }
+  .legend-item.off .legend-swatch { background: transparent; }
+  .legend-item.off .legend-swatch::after { display: none; }
+  .legend-item input:focus-visible + .legend-swatch { outline: 2px solid var(--accent, #2b5797); outline-offset: 2px; }
+  .legend-item.off { color: var(--muted); }
+  .legend-actions { color: var(--muted); }
+  /* Derniers sondages ajoutés */
+  .recent-month { border-top: 1px solid var(--border); padding: 8px 0; }
+  .recent-month > summary { cursor: pointer; font-size: 0.9rem; }
+  .recent-list { display: flex; flex-direction: column; margin-top: 6px; }
+  .recent-wave { display: flex; justify-content: space-between; gap: 10px; padding: 5px 4px 5px 16px; font-size: 0.85rem; border-bottom: 1px dashed var(--border); }
+  .recent-wave:last-child { border-bottom: 0; }
+  .recent-inst { font-weight: 700; }
+  .recent-meta { color: var(--muted); text-align: right; }
   footer { text-align: center; color: var(--muted); font-size: 0.76rem; margin-top: 24px; }
 </style>
 </head>
@@ -384,6 +404,7 @@
         </div>
         <p class="hint" style="margin-top:0;" id="chartSubHint">Avec les mêmes filtres (période, candidats, instituts, mode de simulation) que le reste de la page.</p>
         <canvas id="trendChart" height="366" style="display: block; box-sizing: border-box; height: 293px; width: 800px;" width="1000"></canvas>
+        <div class="chart-legend" id="chartLegend" aria-label="Courbes affichées"></div>
         <p class="hint" id="chartEmptyHint" style="display:none;">Pas assez de données pour tracer une évolution avec les filtres actuels.</p>
       </div>
       <div class="card">
@@ -745,6 +766,12 @@
           <button class="primary" id="openWorkshopBtn" type="button">Ouvrir</button>
         </div>
       </div>
+
+      <div class="card">
+        <h2 style="margin-bottom:2px;">Derniers sondages ajoutés</h2>
+        <p class="hint" style="margin-top:0;">Dans l'ordre d'ajout à l'outil, du plus récent au plus ancien, regroupés par mois d'ajout.</p>
+        <div id="recentPolls"></div>
+      </div>
     </div>
   </div>
 
@@ -1024,7 +1051,7 @@ function renderManualPollsList() {
       if (pos !== -1) dataset.polls.splice(pos, 1);
       saveManualPolls();
       renderManualPollsList();
-      renderInstitutList(); renderMonthList(); render();
+      renderInstitutList(); renderMonthList(); render(); renderRecentPolls();
     });
   });
 }
@@ -1083,7 +1110,7 @@ function handleAddPoll() {
   const poll = {
     cle: "", hypothese: hyp, institut, date, isReal: true,
     scores, blocSums: finalBlocSums, sample, registered: registered ?? null,
-    isManual: true
+    isManual: true, ajoute: todayStr()
   };
 
   dataset.polls.push(poll);
@@ -1101,7 +1128,7 @@ function handleAddPoll() {
     (totalBloc > 0 && (totalBloc < 90 || totalBloc > 106) ? ` <span style="color:#a05a00;">⚠️ Le total des blocs (${totalBloc.toFixed(1)}%) semble inhabituel — vérifiez les scores saisis.</span>` : '');
 
   renderManualPollsList();
-  renderInstitutList(); renderMonthList(); render();
+  renderInstitutList(); renderMonthList(); render(); renderRecentPolls();
 }
 
 
@@ -1559,7 +1586,67 @@ function buildTimeSeries(polls) {
   return { buckets, labels, series };
 }
 
+let legendToggle = false;
+// Légende cochable : décocher une courbe la masque sur le graphique uniquement.
+// --- Derniers sondages ajoutés ------------------------------------------------
+// Une ligne par vague (institut + date de fin de terrain). Ordre : date d'ajout
+// (champ « ajoute ») décroissante, puis ordre dans data.json (le plus tard ajouté d'abord).
+function renderRecentPolls() {
+  const box = document.getElementById("recentPolls");
+  if (!box) return;
+  const waves = new Map();
+  dataset.polls.forEach((p, idx) => {
+    const k = p.institut + "|" + p.date + "|" + (p.isManual ? "m" : "");
+    if (!waves.has(k)) waves.set(k, { institut: p.institut, date: p.date, sample: p.sample, polls: [], idx, ajoute: p.ajoute || null, source: p.source || "", isManual: !!p.isManual });
+    const w = waves.get(k);
+    w.polls.push(p); w.idx = Math.max(w.idx, idx);
+    if (p.ajoute && (!w.ajoute || p.ajoute > w.ajoute)) w.ajoute = p.ajoute;
+  });
+  const list = [...waves.values()].sort((a, b) =>
+    (b.isManual - a.isManual) || ((b.ajoute || "") > (a.ajoute || "") ? 1 : (b.ajoute || "") < (a.ajoute || "") ? -1 : b.idx - a.idx));
+  const monthOf = w => w.isManual ? "local" : (w.ajoute ? w.ajoute.slice(0, 7) : "inconnu");
+  const groups = [];
+  list.forEach(w => { const m = monthOf(w); let g = groups.find(x => x.m === m); if (!g) groups.push(g = { m, waves: [] }); g.waves.push(w); });
+  const monthTitle = m => m === "local" ? "Ajoutés dans ce navigateur, pas encore publiés" : m === "inconnu" ? "Date d'ajout inconnue" : monthLabelOf(m);
+  const terrain = str => { const d = parsePollDate(str); return d ? `${d.day} ${MONTH_SHORT[d.month - 1]} ${d.year}` : str; };
+  box.innerHTML = groups.map((g, gi) => `
+    <details class="recent-month">
+      <summary><strong>${escapeHtml(monthTitle(g.m))}</strong> <span class="hint">· ${g.waves.length} sondage${g.waves.length > 1 ? "s" : ""}</span></summary>
+      <div class="recent-list">
+        ${g.waves.map(w => `
+          <div class="recent-wave"><span class="recent-inst">${escapeHtml(w.institut)}</span><span class="recent-meta">terrain jusqu'au ${terrain(w.date)}</span></div>`).join("")}
+      </div>
+    </details>`).join("") || '<p class="hint">Aucun sondage.</p>';
+}
+
+function renderChartLegend(series) {
+  const box = document.getElementById("chartLegend");
+  if (!box) return;
+  box.innerHTML = series.map((s, i) => {
+    const on = !state.hiddenSeries.has(s.label);
+    return `<label class="legend-item${on ? "" : " off"}" title="${on ? "Masquer" : "Afficher"} cette courbe (les calculs ne changent pas)">
+      <input type="checkbox" data-series="${i}"${on ? " checked" : ""}>
+      <span class="legend-swatch" style="--c:${s.color}"></span>${s.label}</label>`;
+  }).join("") + (series.length > 1
+    ? `<span class="legend-actions"><button class="mini-btn" type="button" data-legend="all">tout afficher</button> · <button class="mini-btn" type="button" data-legend="none">tout masquer</button></span>`
+    : "");
+  box.querySelectorAll("input[data-series]").forEach(inp => inp.addEventListener("change", () => {
+    const label = series[+inp.getAttribute("data-series")].label;
+    if (inp.checked) state.hiddenSeries.delete(label); else state.hiddenSeries.add(label);
+    legendToggle = true;
+    render();
+  }));
+  box.querySelectorAll("[data-legend]").forEach(btn => btn.addEventListener("click", () => {
+    if (btn.getAttribute("data-legend") === "all") series.forEach(s => state.hiddenSeries.delete(s.label));
+    else series.forEach(s => state.hiddenSeries.add(s.label));
+    legendToggle = true;
+    render();
+  }));
+}
+
 function renderChart(polls) {
+  const legendBox = document.getElementById("chartLegend");
+  if (legendBox) legendBox.innerHTML = "";
   const canvas = document.getElementById("trendChart");
   const emptyHint = document.getElementById("chartEmptyHint");
 
@@ -1583,10 +1670,12 @@ function renderChart(polls) {
   emptyHint.style.display = "none";
 
   const subHint = document.getElementById("chartSubHint");
-  subHint.textContent = `Moyenne ${useWeeklyBuckets() ? "hebdomadaire" : "mensuelle"} sur ${periodLabel()}, avec les mêmes filtres (candidats, instituts, mode de simulation) que le reste de la page. Échelle fixe à partir de 0 %, pour comparer les évolutions à la même mesure.`;
+  subHint.textContent = `Moyenne ${useWeeklyBuckets() ? "hebdomadaire" : "mensuelle"} sur ${periodLabel()}, avec les mêmes filtres (candidats, instituts, mode de simulation) que le reste de la page. Échelle fixe à partir de 0 %, pour comparer les évolutions à la même mesure. Décochez une courbe dans la légende pour la masquer (les calculs ne changent pas).`;
 
+  renderChartLegend(series);
   const datasets = series.map(s => ({
     label: s.label,
+    hidden: state.hiddenSeries.has(s.label), // masquée à l'affichage seulement, calculs inchangés
     data: s.data,
     borderColor: s.color,
     backgroundColor: s.color,
@@ -1609,7 +1698,9 @@ function renderChart(polls) {
       trendChartInstance.data.labels = labels;
       trendChartInstance.data.datasets = datasets;
       trendChartInstance.options.scales.y = yScale;
-      trendChartInstance.update();
+      // Cocher/décocher dans la légende : la courbe apparaît/disparaît sans animation.
+      trendChartInstance.update(legendToggle ? "none" : undefined);
+      legendToggle = false;
     } else {
       trendChartInstance = new Chart(canvas.getContext("2d"), {
         type: "line",
@@ -1617,7 +1708,7 @@ function renderChart(polls) {
         options: {
           responsive: true,
           interaction: { mode: "index", intersect: false },
-          plugins: { legend: { position: "bottom", labels: { boxWidth: 12, font: { size: 11 } } } },
+          plugins: { legend: { display: false } }, // remplacée par la légende cochable (#chartLegend)
           scales: { y: yScale }
         }
       });
@@ -2021,6 +2112,7 @@ REF_2022 = dataset.referenceRows.find(r => /2022/.test(r.hypothese)) || null;
   hypSearch: "",
   excludeUnselected: true,
   chartMode: "bloc",
+  hiddenSeries: new Set(), // courbes masquées sur le graphique Tendances (affichage seulement)
   subdivideBloc: false
 };
 
@@ -2031,6 +2123,7 @@ renderNewPollScoreGrid();
 renderInstitutSuggestions();
 renderManualPollsList();
 render();
+renderRecentPolls();
 makeCardsCollapsible();
 }
 

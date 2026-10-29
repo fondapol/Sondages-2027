@@ -180,7 +180,8 @@
     "BLOC DROITE": 47
    },
    "sample": 2068,
-   "registered": 1744
+   "registered": 1744,
+   "ajoute": "2026-09-16"
   },
   {
    "cle": "M-H1",
@@ -225,7 +226,8 @@
     "BLOC DROITE": 46.5
    },
    "sample": 1500,
-   "registered": 1500
+   "registered": 1500,
+   "ajoute": "2026-09-16"
   },
   {
    "cle": "",
@@ -270,7 +272,8 @@
     "BLOC DROITE": 50
    },
    "sample": 1539,
-   "registered": 1415
+   "registered": 1415,
+   "ajoute": "2026-09-16"
   },
   {
    "cle": "M-H2",
@@ -315,7 +318,8 @@
     "BLOC DROITE": 48.5
    },
    "sample": 1501,
-   "registered": 1368
+   "registered": 1368,
+   "ajoute": "2026-09-16"
   },
   {
    "cle": "M-H2",
@@ -360,7 +364,8 @@
     "BLOC DROITE": 47.5
    },
    "sample": 1504,
-   "registered": 1422
+   "registered": 1422,
+   "ajoute": "2026-09-16"
   },
   {
    "cle": "M-H3",
@@ -405,7 +410,8 @@
     "BLOC DROITE": 51
    },
    "sample": 2068,
-   "registered": 1744
+   "registered": 1744,
+   "ajoute": "2026-09-16"
   },
   {
    "cle": "M-H3",
@@ -450,7 +456,8 @@
     "BLOC DROITE": 48.5
    },
    "sample": 1500,
-   "registered": 1500
+   "registered": 1500,
+   "ajoute": "2026-09-16"
   },
   {
    "cle": "M-H3",
@@ -495,7 +502,8 @@
     "BLOC DROITE": 49
    },
    "sample": 1005,
-   "registered": 928
+   "registered": 928,
+   "ajoute": "2026-09-16"
   },
   {
    "cle": "M-H3",
@@ -540,7 +548,8 @@
     "BLOC DROITE": 46
    },
    "sample": 1001,
-   "registered": 901
+   "registered": 901,
+   "ajoute": "2026-09-16"
   },
   {
    "cle": "",
@@ -585,7 +594,8 @@
     "BLOC DROITE": 51
    },
    "sample": 1539,
-   "registered": 1415
+   "registered": 1415,
+   "ajoute": "2026-09-16"
   },
   {
    "cle": "M-H6",
@@ -630,7 +640,8 @@
     "BLOC DROITE": 50
    },
    "sample": 1500,
-   "registered": 1500
+   "registered": 1500,
+   "ajoute": "2026-09-16"
   },
   {
    "cle": "M-H6",
@@ -675,7 +686,8 @@
     "BLOC DROITE": 48.5
    },
    "sample": 1501,
-   "registered": 1368
+   "registered": 1368,
+   "ajoute": "2026-09-16"
   },
   {
    "cle": "U-H6",
@@ -720,7 +732,8 @@
     "BLOC DROITE": 50
    },
    "sample": 1501,
-   "registered": 1368
+   "registered": 1368,
+   "ajoute": "2026-09-16"
   },
   {
    "cle": "U-H6",
@@ -765,7 +778,8 @@
     "BLOC DROITE": 48
    },
    "sample": 1001,
-   "registered": 901
+   "registered": 901,
+   "ajoute": "2026-09-16"
   },
   {
    "cle": "",
@@ -810,7 +824,8 @@
     "BLOC DROITE": 53.5
    },
    "sample": 1539,
-   "registered": 1415
+   "registered": 1415,
+   "ajoute": "2026-09-16"
   },
   {
    "cle": "U-H7",
@@ -855,7 +870,8 @@
     "BLOC DROITE": 50.5
    },
    "sample": 1501,
-   "registered": 1368
+   "registered": 1368,
+   "ajoute": "2026-09-16"
   },
   {
    "cle": "",
@@ -900,7 +916,8 @@
     "BLOC DROITE": 53.5
    },
    "sample": 1539,
-   "registered": 1415
+   "registered": 1415,
+   "ajoute": "2026-09-16"
   },
   {
    "cle": "U-H8",
@@ -945,7 +962,8 @@
     "BLOC DROITE": 48
    },
    "sample": 1501,
-   "registered": 1368
+   "registered": 1368,
+   "ajoute": "2026-09-16"
   },
   {
    "cle": "U-H9",
@@ -990,7 +1008,8 @@
     "BLOC DROITE": 51
    },
    "sample": 1501,
-   "registered": 1368
+   "registered": 1368,
+   "ajoute": "2026-09-16"
   },
   {
    "cle": "U-H11",
@@ -1035,7 +1054,8 @@
     "BLOC DROITE": 47.5
    },
    "sample": 1500,
-   "registered": 1500
+   "registered": 1500,
+   "ajoute": "2026-09-16"
   },
   {
    "cle": "",
@@ -1080,7 +1100,8 @@
     "BLOC DROITE": 53
    },
    "sample": 1539,
-   "registered": 1415
+   "registered": 1415,
+   "ajoute": "2026-09-16"
   },
   {
    "cle": "M-H4",
@@ -1125,7 +1146,8 @@
     "BLOC DROITE": 52
    },
    "sample": 2068,
-   "registered": 1744
+   "registered": 1744,
+   "ajoute": "2026-09-16"
   },
   {
    "cle": "M-H4",
@@ -1170,7 +1192,8 @@
     "BLOC DROITE": 50.5
    },
    "sample": 1500,
-   "registered": 1500
+   "registered": 1500,
+   "ajoute": "2026-09-16"
   },
   {
    "cle": "M-H4",
@@ -1215,7 +1238,8 @@
     "BLOC DROITE": 50
    },
    "sample": 1001,
-   "registered": 901
+   "registered": 901,
+   "ajoute": "2026-09-16"
   },
   {
    "cle": "",
@@ -1260,7 +1284,8 @@
     "BLOC DROITE": 54.5
    },
    "sample": 1539,
-   "registered": 1415
+   "registered": 1415,
+   "ajoute": "2026-09-16"
   },
   {
    "cle": "M-H5",
@@ -1305,7 +1330,8 @@
     "BLOC DROITE": 51.5
    },
    "sample": 1500,
-   "registered": 1500
+   "registered": 1500,
+   "ajoute": "2026-09-16"
   },
   {
    "cle": "M-H5",
@@ -1350,7 +1376,8 @@
     "BLOC DROITE": 50.5
    },
    "sample": 1501,
-   "registered": 1368
+   "registered": 1368,
+   "ajoute": "2026-09-16"
   },
   {
    "cle": "U-H14",
@@ -1395,7 +1422,8 @@
     "BLOC DROITE": 45.5
    },
    "sample": 1504,
-   "registered": 1422
+   "registered": 1422,
+   "ajoute": "2026-09-16"
   },
   {
    "cle": "U-H3",
@@ -1440,7 +1468,8 @@
     "BLOC DROITE": 49.5
    },
    "sample": 1501,
-   "registered": 1368
+   "registered": 1368,
+   "ajoute": "2026-09-16"
   },
   {
    "cle": "U-H13",
@@ -1485,7 +1514,8 @@
     "BLOC DROITE": 49
    },
    "sample": 2068,
-   "registered": 1744
+   "registered": 1744,
+   "ajoute": "2026-09-16"
   },
   {
    "cle": "",
@@ -1530,7 +1560,8 @@
     "BLOC DROITE": 51
    },
    "sample": 1539,
-   "registered": 1415
+   "registered": 1415,
+   "ajoute": "2026-09-16"
   },
   {
    "cle": "",
@@ -1575,7 +1606,8 @@
     "BLOC DROITE": 47
    },
    "sample": 1837,
-   "registered": 1592
+   "registered": 1592,
+   "ajoute": "2026-09-16"
   },
   {
    "cle": "",
@@ -1620,7 +1652,8 @@
     "BLOC DROITE": 50
    },
    "sample": 1075,
-   "registered": 984
+   "registered": 984,
+   "ajoute": "2026-09-16"
   },
   {
    "cle": "",
@@ -1665,7 +1698,8 @@
     "BLOC DROITE": 47
    },
    "sample": 1042,
-   "registered": 963
+   "registered": 963,
+   "ajoute": "2026-09-16"
   },
   {
    "cle": "",
@@ -1710,7 +1744,8 @@
     "BLOC DROITE": 46
    },
    "sample": 1800,
-   "registered": 1598
+   "registered": 1598,
+   "ajoute": "2026-09-16"
   },
   {
    "cle": "",
@@ -1755,7 +1790,8 @@
     "BLOC DROITE": 47
    },
    "sample": 1500,
-   "registered": 1500
+   "registered": 1500,
+   "ajoute": "2026-09-16"
   },
   {
    "cle": "U-H1",
@@ -1800,7 +1836,8 @@
     "BLOC DROITE": 51
    },
    "sample": 2068,
-   "registered": 1744
+   "registered": 1744,
+   "ajoute": "2026-09-16"
   },
   {
    "cle": "",
@@ -1845,7 +1882,8 @@
     "BLOC DROITE": 54
    },
    "sample": 1539,
-   "registered": 1415
+   "registered": 1415,
+   "ajoute": "2026-09-16"
   },
   {
    "cle": "",
@@ -1890,7 +1928,8 @@
     "BLOC DROITE": 50
    },
    "sample": 1837,
-   "registered": 1592
+   "registered": 1592,
+   "ajoute": "2026-09-16"
   },
   {
    "cle": "",
@@ -1935,7 +1974,8 @@
     "BLOC DROITE": 47.5
    },
    "sample": 1800,
-   "registered": 1598
+   "registered": 1598,
+   "ajoute": "2026-09-16"
   },
   {
    "cle": "",
@@ -1980,7 +2020,8 @@
     "BLOC DROITE": 50
    },
    "sample": 1500,
-   "registered": 1500
+   "registered": 1500,
+   "ajoute": "2026-09-16"
   },
   {
    "cle": "",
@@ -2025,7 +2066,8 @@
     "BLOC DROITE": 45.5
    },
    "sample": 1500,
-   "registered": 1500
+   "registered": 1500,
+   "ajoute": "2026-09-16"
   },
   {
    "cle": "",
@@ -2070,7 +2112,8 @@
     "BLOC DROITE": 47
    },
    "sample": 1837,
-   "registered": 1592
+   "registered": 1592,
+   "ajoute": "2026-09-16"
   },
   {
    "cle": "",
@@ -2115,7 +2158,8 @@
     "BLOC DROITE": 47
    },
    "sample": 1047,
-   "registered": 987
+   "registered": 987,
+   "ajoute": "2026-09-16"
   },
   {
    "cle": "",
@@ -2160,7 +2204,8 @@
     "BLOC DROITE": 51.5
    },
    "sample": 1075,
-   "registered": 984
+   "registered": 984,
+   "ajoute": "2026-09-16"
   },
   {
    "cle": "",
@@ -2205,7 +2250,8 @@
     "BLOC DROITE": 51
    },
    "sample": 1042,
-   "registered": 963
+   "registered": 963,
+   "ajoute": "2026-09-16"
   },
   {
    "cle": "",
@@ -2250,7 +2296,8 @@
     "BLOC DROITE": 48
    },
    "sample": 1503,
-   "registered": 1390
+   "registered": 1390,
+   "ajoute": "2026-09-16"
   },
   {
    "cle": "",
@@ -2295,7 +2342,8 @@
     "BLOC DROITE": 46
    },
    "sample": 1042,
-   "registered": 963
+   "registered": 963,
+   "ajoute": "2026-09-16"
   },
   {
    "cle": "",
@@ -2340,7 +2388,8 @@
     "BLOC DROITE": 46
    },
    "sample": 2114,
-   "registered": 1764
+   "registered": 1764,
+   "ajoute": "2026-09-16"
   },
   {
    "cle": "",
@@ -2385,7 +2434,8 @@
     "BLOC DROITE": 44
    },
    "sample": 1800,
-   "registered": 1598
+   "registered": 1598,
+   "ajoute": "2026-09-16"
   },
   {
    "cle": "",
@@ -2430,7 +2480,8 @@
     "BLOC DROITE": 45
    },
    "sample": 1500,
-   "registered": 1500
+   "registered": 1500,
+   "ajoute": "2026-09-16"
   },
   {
    "cle": "U-H5",
@@ -2475,7 +2526,8 @@
     "BLOC DROITE": 47.5
    },
    "sample": 1501,
-   "registered": 1368
+   "registered": 1368,
+   "ajoute": "2026-09-16"
   },
   {
    "cle": "",
@@ -2520,7 +2572,8 @@
     "BLOC DROITE": 47.5
    },
    "sample": 1503,
-   "registered": 1390
+   "registered": 1390,
+   "ajoute": "2026-09-16"
   },
   {
    "cle": "",
@@ -2565,7 +2618,8 @@
     "BLOC DROITE": 47.5
    },
    "sample": 1501,
-   "registered": 1378
+   "registered": 1378,
+   "ajoute": "2026-09-16"
   },
   {
    "cle": "",
@@ -2610,7 +2664,8 @@
     "BLOC DROITE": 50
    },
    "sample": 1503,
-   "registered": 1390
+   "registered": 1390,
+   "ajoute": "2026-09-16"
   },
   {
    "cle": "",
@@ -2655,7 +2710,8 @@
     "BLOC DROITE": 50
    },
    "sample": 1501,
-   "registered": 1378
+   "registered": 1378,
+   "ajoute": "2026-09-16"
   },
   {
    "cle": "",
@@ -2700,7 +2756,8 @@
     "BLOC DROITE": 48
    },
    "sample": 1837,
-   "registered": 1592
+   "registered": 1592,
+   "ajoute": "2026-09-16"
   },
   {
    "cle": "U-H15",
@@ -2745,7 +2802,8 @@
     "BLOC DROITE": 46.5
    },
    "sample": 1504,
-   "registered": 1422
+   "registered": 1422,
+   "ajoute": "2026-09-16"
   },
   {
    "cle": "U-H2",
@@ -2790,7 +2848,8 @@
     "BLOC DROITE": 50.5
    },
    "sample": 1504,
-   "registered": 1422
+   "registered": 1422,
+   "ajoute": "2026-09-16"
   },
   {
    "cle": "U-H4",
@@ -2835,7 +2894,8 @@
     "BLOC DROITE": 49.5
    },
    "sample": 1501,
-   "registered": 1368
+   "registered": 1368,
+   "ajoute": "2026-09-16"
   },
   {
    "cle": "U-H12",
@@ -2880,7 +2940,8 @@
     "BLOC DROITE": 46.5
    },
    "sample": 1500,
-   "registered": 1500
+   "registered": 1500,
+   "ajoute": "2026-09-16"
   },
   {
    "cle": "",
@@ -2925,7 +2986,8 @@
     "BLOC DROITE": 51
    },
    "sample": 1837,
-   "registered": 1592
+   "registered": 1592,
+   "ajoute": "2026-09-16"
   },
   {
    "cle": "",
@@ -2970,7 +3032,8 @@
     "BLOC DROITE": 47
    },
    "sample": 1503,
-   "registered": 1390
+   "registered": 1390,
+   "ajoute": "2026-09-16"
   },
   {
    "cle": "",
@@ -3015,7 +3078,8 @@
     "BLOC DROITE": 48
    },
    "sample": 1503,
-   "registered": 1390
+   "registered": 1390,
+   "ajoute": "2026-09-16"
   },
   {
    "cle": "",
@@ -3060,7 +3124,8 @@
     "BLOC DROITE": 51.5
    },
    "sample": 1503,
-   "registered": 1390
+   "registered": 1390,
+   "ajoute": "2026-09-16"
   },
   {
    "cle": "",
@@ -3105,7 +3170,8 @@
     "BLOC DROITE": 47
    },
    "sample": 1800,
-   "registered": 1598
+   "registered": 1598,
+   "ajoute": "2026-09-16"
   },
   {
    "cle": "",
@@ -3150,7 +3216,8 @@
     "BLOC DROITE": 48
    },
    "sample": 1800,
-   "registered": 1598
+   "registered": 1598,
+   "ajoute": "2026-09-16"
   },
   {
    "cle": "",
@@ -3195,7 +3262,8 @@
     "BLOC DROITE": 46.5
    },
    "sample": 1800,
-   "registered": 1598
+   "registered": 1598,
+   "ajoute": "2026-09-16"
   },
   {
    "cle": "",
@@ -3240,7 +3308,8 @@
     "BLOC DROITE": 52
    },
    "sample": 1800,
-   "registered": 1598
+   "registered": 1598,
+   "ajoute": "2026-09-16"
   },
   {
    "cle": "",
@@ -3285,7 +3354,8 @@
     "BLOC DROITE": 49.5
    },
    "sample": 1501,
-   "registered": 1378
+   "registered": 1378,
+   "ajoute": "2026-09-16"
   },
   {
    "cle": "",
@@ -3330,7 +3400,8 @@
     "BLOC DROITE": 54
    },
    "sample": 1501,
-   "registered": 1378
+   "registered": 1378,
+   "ajoute": "2026-09-16"
   },
   {
    "cle": "",
@@ -3375,7 +3446,8 @@
     "BLOC DROITE": 49
    },
    "sample": 1501,
-   "registered": 1378
+   "registered": 1378,
+   "ajoute": "2026-09-16"
   },
   {
    "cle": "",
@@ -3420,7 +3492,8 @@
     "BLOC DROITE": 47.5
    },
    "sample": 1501,
-   "registered": 1378
+   "registered": 1378,
+   "ajoute": "2026-09-16"
   },
   {
    "cle": "",
@@ -3465,7 +3538,8 @@
     "BLOC DROITE": 45.5
    },
    "sample": 1500,
-   "registered": 1500
+   "registered": 1500,
+   "ajoute": "2026-09-16"
   },
   {
    "cle": "",
@@ -3510,7 +3584,8 @@
     "BLOC DROITE": 47
    },
    "sample": 1500,
-   "registered": 1500
+   "registered": 1500,
+   "ajoute": "2026-09-16"
   },
   {
    "cle": "",
@@ -3555,7 +3630,8 @@
     "BLOC DROITE": 52
    },
    "sample": 1500,
-   "registered": 1500
+   "registered": 1500,
+   "ajoute": "2026-09-16"
   },
   {
    "cle": "",
@@ -3600,7 +3676,8 @@
     "BLOC DROITE": 49
    },
    "sample": 1003,
-   "registered": 929
+   "registered": 929,
+   "ajoute": "2026-09-16"
   },
   {
    "cle": "",
@@ -3645,7 +3722,8 @@
     "BLOC DROITE": 44
    },
    "sample": 1003,
-   "registered": 929
+   "registered": 929,
+   "ajoute": "2026-09-16"
   },
   {
    "cle": "",
@@ -3690,7 +3768,8 @@
     "BLOC DROITE": 44
    },
    "sample": 1003,
-   "registered": 929
+   "registered": 929,
+   "ajoute": "2026-09-16"
   },
   {
    "cle": "",
@@ -3731,7 +3810,8 @@
    },
    "sample": 1001,
    "registered": null,
-   "source": "wikipedia-auto"
+   "source": "wikipedia-auto",
+   "ajoute": "2026-09-16"
   },
   {
    "cle": "",
@@ -3772,7 +3852,8 @@
    },
    "sample": 1001,
    "registered": null,
-   "source": "wikipedia-auto"
+   "source": "wikipedia-auto",
+   "ajoute": "2026-09-16"
   },
   {
    "cle": "",
@@ -3813,7 +3894,8 @@
    },
    "sample": 1001,
    "registered": null,
-   "source": "wikipedia-auto"
+   "source": "wikipedia-auto",
+   "ajoute": "2026-09-16"
   },
   {
    "cle": "",
@@ -3854,7 +3936,8 @@
    },
    "sample": 2052,
    "registered": null,
-   "source": "wikipedia-auto"
+   "source": "wikipedia-auto",
+   "ajoute": "2026-09-16"
   },
   {
    "cle": "",
@@ -3895,7 +3978,8 @@
    },
    "sample": 2052,
    "registered": null,
-   "source": "wikipedia-auto"
+   "source": "wikipedia-auto",
+   "ajoute": "2026-09-16"
   },
   {
    "cle": "",
@@ -3936,7 +4020,8 @@
    },
    "sample": 2052,
    "registered": null,
-   "source": "wikipedia-auto"
+   "source": "wikipedia-auto",
+   "ajoute": "2026-09-16"
   },
   {
    "cle": "",
@@ -3977,7 +4062,8 @@
    },
    "sample": 2052,
    "registered": null,
-   "source": "wikipedia-auto"
+   "source": "wikipedia-auto",
+   "ajoute": "2026-09-16"
   },
   {
    "cle": "",
@@ -4018,7 +4104,8 @@
    },
    "sample": 2052,
    "registered": null,
-   "source": "wikipedia-auto"
+   "source": "wikipedia-auto",
+   "ajoute": "2026-09-16"
   },
   {
    "cle": "",
@@ -4059,7 +4146,8 @@
    },
    "sample": 1001,
    "registered": null,
-   "source": "wikipedia-auto"
+   "source": "wikipedia-auto",
+   "ajoute": "2026-09-16"
   },
   {
    "cle": "",
@@ -4100,7 +4188,8 @@
    },
    "sample": 1001,
    "registered": null,
-   "source": "wikipedia-auto"
+   "source": "wikipedia-auto",
+   "ajoute": "2026-09-16"
   },
   {
    "cle": "",
@@ -4141,7 +4230,8 @@
    },
    "sample": 1001,
    "registered": null,
-   "source": "wikipedia-auto"
+   "source": "wikipedia-auto",
+   "ajoute": "2026-09-16"
   },
   {
    "cle": "",
@@ -4182,7 +4272,8 @@
    },
    "sample": 13060,
    "registered": null,
-   "source": "wikipedia-auto"
+   "source": "wikipedia-auto",
+   "ajoute": "2026-09-16"
   },
   {
    "cle": "",
@@ -4223,7 +4314,8 @@
    },
    "sample": 13060,
    "registered": null,
-   "source": "wikipedia-auto"
+   "source": "wikipedia-auto",
+   "ajoute": "2026-09-16"
   },
   {
    "cle": "",
@@ -4264,7 +4356,8 @@
    },
    "sample": 13060,
    "registered": null,
-   "source": "wikipedia-auto"
+   "source": "wikipedia-auto",
+   "ajoute": "2026-09-16"
   },
   {
    "cle": "",
@@ -4305,7 +4398,8 @@
    },
    "sample": 13060,
    "registered": null,
-   "source": "wikipedia-auto"
+   "source": "wikipedia-auto",
+   "ajoute": "2026-09-16"
   },
   {
    "cle": "",
@@ -4346,7 +4440,8 @@
    },
    "sample": 13060,
    "registered": null,
-   "source": "wikipedia-auto"
+   "source": "wikipedia-auto",
+   "ajoute": "2026-09-16"
   },
   {
    "cle": "",
@@ -4387,7 +4482,8 @@
    },
    "sample": 13060,
    "registered": null,
-   "source": "wikipedia-auto"
+   "source": "wikipedia-auto",
+   "ajoute": "2026-09-16"
   },
   {
    "cle": "",
@@ -4428,7 +4524,8 @@
    },
    "sample": 1711,
    "registered": null,
-   "source": "wikipedia-auto"
+   "source": "wikipedia-auto",
+   "ajoute": "2026-09-16"
   },
   {
    "cle": "",
@@ -4469,7 +4566,8 @@
    },
    "sample": 1711,
    "registered": null,
-   "source": "wikipedia-auto"
+   "source": "wikipedia-auto",
+   "ajoute": "2026-09-16"
   },
   {
    "cle": "",
@@ -4510,7 +4608,8 @@
    },
    "sample": 1711,
    "registered": null,
-   "source": "wikipedia-auto"
+   "source": "wikipedia-auto",
+   "ajoute": "2026-09-16"
   },
   {
    "cle": "",
@@ -4552,7 +4651,8 @@
    },
    "sample": 1001,
    "registered": null,
-   "source": "wikipedia-auto"
+   "source": "wikipedia-auto",
+   "ajoute": "2026-09-22"
   },
   {
    "cle": "",
@@ -4596,7 +4696,8 @@
    },
    "sample": 1974,
    "registered": null,
-   "source": "wikipedia-auto"
+   "source": "wikipedia-auto",
+   "ajoute": "2026-09-29"
   },
   {
    "cle": "",
@@ -4640,7 +4741,8 @@
    },
    "sample": 1974,
    "registered": null,
-   "source": "wikipedia-auto"
+   "source": "wikipedia-auto",
+   "ajoute": "2026-09-29"
   },
   {
    "cle": "",
@@ -4684,7 +4786,8 @@
    },
    "sample": 1974,
    "registered": null,
-   "source": "wikipedia-auto"
+   "source": "wikipedia-auto",
+   "ajoute": "2026-09-29"
   },
   {
    "cle": "",
@@ -4728,7 +4831,8 @@
    },
    "sample": 1974,
    "registered": null,
-   "source": "wikipedia-auto"
+   "source": "wikipedia-auto",
+   "ajoute": "2026-09-29"
   },
   {
    "cle": "",
@@ -4772,7 +4876,8 @@
    },
    "sample": 1974,
    "registered": null,
-   "source": "wikipedia-auto"
+   "source": "wikipedia-auto",
+   "ajoute": "2026-09-29"
   },
   {
    "cle": "",
@@ -4816,7 +4921,8 @@
    },
    "sample": 1943,
    "registered": null,
-   "source": "wikipedia-auto"
+   "source": "wikipedia-auto",
+   "ajoute": "2026-09-29"
   },
   {
    "cle": "",
@@ -4860,7 +4966,8 @@
    },
    "sample": 1943,
    "registered": null,
-   "source": "wikipedia-auto"
+   "source": "wikipedia-auto",
+   "ajoute": "2026-09-29"
   },
   {
    "cle": "",
@@ -4904,7 +5011,8 @@
    },
    "sample": 1943,
    "registered": null,
-   "source": "wikipedia-auto"
+   "source": "wikipedia-auto",
+   "ajoute": "2026-09-29"
   },
   {
    "cle": "",
@@ -4948,7 +5056,8 @@
    },
    "sample": 1506,
    "registered": 1404,
-   "source": "ajout-manuel (notice Commission des sondages n°10246, Le Grand Continent)"
+   "source": "ajout-manuel (notice Commission des sondages n°10246, Le Grand Continent)",
+   "ajoute": "2026-09-30"
   },
   {
    "cle": "",
@@ -4992,7 +5101,8 @@
    },
    "sample": 1506,
    "registered": 1404,
-   "source": "ajout-manuel (notice Commission des sondages n°10246, Le Grand Continent)"
+   "source": "ajout-manuel (notice Commission des sondages n°10246, Le Grand Continent)",
+   "ajoute": "2026-09-30"
   },
   {
    "cle": "",
@@ -5036,7 +5146,8 @@
    },
    "sample": 1103,
    "registered": null,
-   "source": "wikipedia-auto"
+   "source": "wikipedia-auto",
+   "ajoute": "2026-09-30"
   },
   {
    "cle": "",
@@ -5080,7 +5191,8 @@
    },
    "sample": 1103,
    "registered": null,
-   "source": "wikipedia-auto"
+   "source": "wikipedia-auto",
+   "ajoute": "2026-09-30"
   },
   {
    "cle": "",
@@ -5124,7 +5236,8 @@
    },
    "sample": 1103,
    "registered": null,
-   "source": "wikipedia-auto"
+   "source": "wikipedia-auto",
+   "ajoute": "2026-09-30"
   },
   {
    "cle": "",
@@ -5168,7 +5281,8 @@
    },
    "sample": 1103,
    "registered": null,
-   "source": "wikipedia-auto"
+   "source": "wikipedia-auto",
+   "ajoute": "2026-09-30"
   },
   {
    "cle": "",
@@ -5212,7 +5326,8 @@
    },
    "sample": 1103,
    "registered": null,
-   "source": "wikipedia-auto"
+   "source": "wikipedia-auto",
+   "ajoute": "2026-09-30"
   },
   {
    "cle": "",
@@ -5256,7 +5371,8 @@
    },
    "sample": 1103,
    "registered": null,
-   "source": "wikipedia-auto"
+   "source": "wikipedia-auto",
+   "ajoute": "2026-09-30"
   },
   {
    "cle": "",
@@ -5300,7 +5416,8 @@
    },
    "sample": 1527,
    "registered": 1393,
-   "source": "ajout-manuel (notice Commission des sondages n°10284, Ifop-Fiducial pour LCI, Le Figaro et Sud Radio)"
+   "source": "ajout-manuel (notice Commission des sondages n°10284, Ifop-Fiducial pour LCI, Le Figaro et Sud Radio)",
+   "ajoute": "2026-10-01"
   },
   {
    "cle": "",
@@ -5344,7 +5461,8 @@
    },
    "sample": 1527,
    "registered": 1393,
-   "source": "ajout-manuel (notice Commission des sondages n°10284, Ifop-Fiducial pour LCI, Le Figaro et Sud Radio)"
+   "source": "ajout-manuel (notice Commission des sondages n°10284, Ifop-Fiducial pour LCI, Le Figaro et Sud Radio)",
+   "ajoute": "2026-10-01"
   },
   {
    "cle": "",
@@ -5388,7 +5506,8 @@
    },
    "sample": 1527,
    "registered": 1393,
-   "source": "ajout-manuel (notice Commission des sondages n°10284, Ifop-Fiducial pour LCI, Le Figaro et Sud Radio)"
+   "source": "ajout-manuel (notice Commission des sondages n°10284, Ifop-Fiducial pour LCI, Le Figaro et Sud Radio)",
+   "ajoute": "2026-10-01"
   },
   {
    "cle": "",
@@ -5432,7 +5551,8 @@
    },
    "sample": 1527,
    "registered": 1393,
-   "source": "ajout-manuel (notice Commission des sondages n°10284, Ifop-Fiducial pour LCI, Le Figaro et Sud Radio)"
+   "source": "ajout-manuel (notice Commission des sondages n°10284, Ifop-Fiducial pour LCI, Le Figaro et Sud Radio)",
+   "ajoute": "2026-10-01"
   },
   {
    "cle": "",
@@ -5476,7 +5596,8 @@
    },
    "sample": 1527,
    "registered": 1393,
-   "source": "ajout-manuel (notice Commission des sondages n°10284, Ifop-Fiducial pour LCI, Le Figaro et Sud Radio)"
+   "source": "ajout-manuel (notice Commission des sondages n°10284, Ifop-Fiducial pour LCI, Le Figaro et Sud Radio)",
+   "ajoute": "2026-10-01"
   },
   {
    "cle": "",
@@ -5520,7 +5641,8 @@
    },
    "sample": 1527,
    "registered": 1393,
-   "source": "ajout-manuel (notice Commission des sondages n°10284, Ifop-Fiducial pour LCI, Le Figaro et Sud Radio)"
+   "source": "ajout-manuel (notice Commission des sondages n°10284, Ifop-Fiducial pour LCI, Le Figaro et Sud Radio)",
+   "ajoute": "2026-10-01"
   },
   {
    "cle": "",
@@ -5564,7 +5686,8 @@
    },
    "sample": 1527,
    "registered": 1393,
-   "source": "ajout-manuel (notice Commission des sondages n°10284, Ifop-Fiducial pour LCI, Le Figaro et Sud Radio)"
+   "source": "ajout-manuel (notice Commission des sondages n°10284, Ifop-Fiducial pour LCI, Le Figaro et Sud Radio)",
+   "ajoute": "2026-10-01"
   },
   {
    "cle": "",
@@ -5608,7 +5731,8 @@
    },
    "sample": 1527,
    "registered": 1393,
-   "source": "ajout-manuel (notice Commission des sondages n°10284, Ifop-Fiducial pour LCI, Le Figaro et Sud Radio)"
+   "source": "ajout-manuel (notice Commission des sondages n°10284, Ifop-Fiducial pour LCI, Le Figaro et Sud Radio)",
+   "ajoute": "2026-10-01"
   },
   {
    "cle": "",
@@ -5652,7 +5776,8 @@
    },
    "sample": 1527,
    "registered": 1393,
-   "source": "ajout-manuel (notice Commission des sondages n°10284, Ifop-Fiducial pour LCI, Le Figaro et Sud Radio)"
+   "source": "ajout-manuel (notice Commission des sondages n°10284, Ifop-Fiducial pour LCI, Le Figaro et Sud Radio)",
+   "ajoute": "2026-10-01"
   },
   {
    "cle": "",
@@ -5696,7 +5821,8 @@
    },
    "sample": 1527,
    "registered": 1393,
-   "source": "ajout-manuel (notice Commission des sondages n°10284, Ifop-Fiducial pour LCI, Le Figaro et Sud Radio)"
+   "source": "ajout-manuel (notice Commission des sondages n°10284, Ifop-Fiducial pour LCI, Le Figaro et Sud Radio)",
+   "ajoute": "2026-10-01"
   },
   {
    "cle": "",
@@ -5740,7 +5866,8 @@
    },
    "sample": 2004,
    "registered": null,
-   "source": "wikipedia-auto"
+   "source": "wikipedia-auto",
+   "ajoute": "2026-10-13"
   },
   {
    "cle": "",
@@ -5784,7 +5911,8 @@
    },
    "sample": 2004,
    "registered": null,
-   "source": "wikipedia-auto"
+   "source": "wikipedia-auto",
+   "ajoute": "2026-10-13"
   },
   {
    "cle": "",
@@ -5828,7 +5956,8 @@
    },
    "sample": 2004,
    "registered": null,
-   "source": "wikipedia-auto"
+   "source": "wikipedia-auto",
+   "ajoute": "2026-10-13"
   },
   {
    "cle": "",
@@ -5872,7 +6001,8 @@
    },
    "sample": 2004,
    "registered": null,
-   "source": "wikipedia-auto"
+   "source": "wikipedia-auto",
+   "ajoute": "2026-10-13"
   },
   {
    "cle": "",
@@ -5916,7 +6046,8 @@
    },
    "sample": 2004,
    "registered": null,
-   "source": "wikipedia-auto"
+   "source": "wikipedia-auto",
+   "ajoute": "2026-10-13"
   },
   {
    "cle": "",
@@ -5959,7 +6090,8 @@
    },
    "sample": 1525,
    "registered": null,
-   "source": "wikipedia-auto"
+   "source": "wikipedia-auto",
+   "ajoute": "2026-10-15"
   },
   {
    "cle": "",
@@ -6002,7 +6134,8 @@
    },
    "sample": 1525,
    "registered": null,
-   "source": "wikipedia-auto"
+   "source": "wikipedia-auto",
+   "ajoute": "2026-10-15"
   },
   {
    "cle": "",
@@ -6045,7 +6178,8 @@
    },
    "sample": 1525,
    "registered": null,
-   "source": "wikipedia-auto"
+   "source": "wikipedia-auto",
+   "ajoute": "2026-10-15"
   },
   {
    "cle": "",
@@ -6088,7 +6222,8 @@
    },
    "sample": 1525,
    "registered": null,
-   "source": "wikipedia-auto"
+   "source": "wikipedia-auto",
+   "ajoute": "2026-10-15"
   },
   {
    "cle": "",
@@ -6131,7 +6266,8 @@
    },
    "sample": 12005,
    "registered": null,
-   "source": "wikipedia-auto"
+   "source": "wikipedia-auto",
+   "ajoute": "2026-10-15"
   },
   {
    "cle": "",
@@ -6174,7 +6310,8 @@
    },
    "sample": 12005,
    "registered": null,
-   "source": "wikipedia-auto"
+   "source": "wikipedia-auto",
+   "ajoute": "2026-10-15"
   },
   {
    "cle": "",
@@ -6218,7 +6355,8 @@
    },
    "sample": 1701,
    "registered": null,
-   "source": "wikipedia-auto"
+   "source": "wikipedia-auto",
+   "ajoute": "2026-10-20"
   },
   {
    "cle": "",
@@ -6262,7 +6400,8 @@
    },
    "sample": 1701,
    "registered": null,
-   "source": "wikipedia-auto"
+   "source": "wikipedia-auto",
+   "ajoute": "2026-10-20"
   },
   {
    "cle": "",
@@ -6306,7 +6445,8 @@
    },
    "sample": 1701,
    "registered": null,
-   "source": "wikipedia-auto"
+   "source": "wikipedia-auto",
+   "ajoute": "2026-10-20"
   },
   {
    "cle": "",
@@ -6350,7 +6490,8 @@
    },
    "sample": 1701,
    "registered": null,
-   "source": "wikipedia-auto"
+   "source": "wikipedia-auto",
+   "ajoute": "2026-10-20"
   },
   {
    "cle": "",
@@ -6394,7 +6535,8 @@
    },
    "sample": 1701,
    "registered": null,
-   "source": "wikipedia-auto"
+   "source": "wikipedia-auto",
+   "ajoute": "2026-10-20"
   },
   {
    "cle": "",
@@ -6438,7 +6580,8 @@
    },
    "sample": 1701,
    "registered": null,
-   "source": "wikipedia-auto"
+   "source": "wikipedia-auto",
+   "ajoute": "2026-10-20"
   },
   {
    "cle": "",
@@ -6482,7 +6625,8 @@
    },
    "sample": 1263,
    "registered": null,
-   "source": "wikipedia-auto"
+   "source": "wikipedia-auto",
+   "ajoute": "2026-10-20"
   },
   {
    "cle": "",
@@ -6526,7 +6670,8 @@
    },
    "sample": 1263,
    "registered": null,
-   "source": "wikipedia-auto"
+   "source": "wikipedia-auto",
+   "ajoute": "2026-10-20"
   },
   {
    "cle": "",
@@ -6569,7 +6714,8 @@
    },
    "sample": 1263,
    "registered": null,
-   "source": "wikipedia-auto"
+   "source": "wikipedia-auto",
+   "ajoute": "2026-10-20"
   },
   {
    "cle": "",
@@ -6612,7 +6758,8 @@
    },
    "sample": 1263,
    "registered": null,
-   "source": "wikipedia-auto"
+   "source": "wikipedia-auto",
+   "ajoute": "2026-10-20"
   },
   {
    "cle": "",
@@ -6656,7 +6803,8 @@
    },
    "sample": 1263,
    "registered": null,
-   "source": "wikipedia-auto"
+   "source": "wikipedia-auto",
+   "ajoute": "2026-10-20"
   },
   {
    "cle": "",
@@ -6700,7 +6848,8 @@
    },
    "sample": 1094,
    "registered": null,
-   "source": "wikipedia-auto"
+   "source": "wikipedia-auto",
+   "ajoute": "2026-10-20"
   },
   {
    "cle": "",
@@ -6744,7 +6893,8 @@
    },
    "sample": 1094,
    "registered": null,
-   "source": "wikipedia-auto"
+   "source": "wikipedia-auto",
+   "ajoute": "2026-10-20"
   },
   {
    "cle": "",
@@ -6788,7 +6938,8 @@
    },
    "sample": 1094,
    "registered": null,
-   "source": "wikipedia-auto"
+   "source": "wikipedia-auto",
+   "ajoute": "2026-10-20"
   },
   {
    "cle": "",
@@ -6832,7 +6983,8 @@
    },
    "sample": 1094,
    "registered": null,
-   "source": "wikipedia-auto"
+   "source": "wikipedia-auto",
+   "ajoute": "2026-10-20"
   },
   {
    "cle": "",
@@ -6876,7 +7028,8 @@
    },
    "sample": 1094,
    "registered": null,
-   "source": "wikipedia-auto"
+   "source": "wikipedia-auto",
+   "ajoute": "2026-10-20"
   },
   {
    "cle": "",
@@ -6920,7 +7073,8 @@
    },
    "sample": 1043,
    "registered": null,
-   "source": "wikipedia-auto"
+   "source": "wikipedia-auto",
+   "ajoute": "2026-10-20"
   },
   {
    "cle": "",
@@ -6964,7 +7118,8 @@
    },
    "sample": 1043,
    "registered": null,
-   "source": "wikipedia-auto"
+   "source": "wikipedia-auto",
+   "ajoute": "2026-10-20"
   },
   {
    "cle": "",
@@ -7008,7 +7163,8 @@
    },
    "sample": 1043,
    "registered": null,
-   "source": "wikipedia-auto"
+   "source": "wikipedia-auto",
+   "ajoute": "2026-10-20"
   },
   {
    "cle": "",
@@ -7052,7 +7208,8 @@
    },
    "sample": 1043,
    "registered": null,
-   "source": "wikipedia-auto"
+   "source": "wikipedia-auto",
+   "ajoute": "2026-10-20"
   },
   {
    "cle": "",
@@ -7096,7 +7253,8 @@
    },
    "sample": 2081,
    "registered": 1928,
-   "source": "ajout-manuel (notice Commission des sondages n°10327, Ifop-Fiducial pour LCI, Le Figaro et Sud Radio)"
+   "source": "ajout-manuel (notice Commission des sondages n°10327, Ifop-Fiducial pour LCI, Le Figaro et Sud Radio)",
+   "ajoute": "2026-10-21"
   },
   {
    "cle": "",
@@ -7140,7 +7298,8 @@
    },
    "sample": 2081,
    "registered": 1928,
-   "source": "ajout-manuel (notice Commission des sondages n°10327, Ifop-Fiducial pour LCI, Le Figaro et Sud Radio)"
+   "source": "ajout-manuel (notice Commission des sondages n°10327, Ifop-Fiducial pour LCI, Le Figaro et Sud Radio)",
+   "ajoute": "2026-10-21"
   },
   {
    "cle": "",
@@ -7184,7 +7343,8 @@
    },
    "sample": 2081,
    "registered": 1928,
-   "source": "ajout-manuel (notice Commission des sondages n°10327, Ifop-Fiducial pour LCI, Le Figaro et Sud Radio)"
+   "source": "ajout-manuel (notice Commission des sondages n°10327, Ifop-Fiducial pour LCI, Le Figaro et Sud Radio)",
+   "ajoute": "2026-10-21"
   },
   {
    "cle": "",
@@ -7228,7 +7388,8 @@
    },
    "sample": 2081,
    "registered": 1928,
-   "source": "ajout-manuel (notice Commission des sondages n°10327, Ifop-Fiducial pour LCI, Le Figaro et Sud Radio)"
+   "source": "ajout-manuel (notice Commission des sondages n°10327, Ifop-Fiducial pour LCI, Le Figaro et Sud Radio)",
+   "ajoute": "2026-10-21"
   },
   {
    "cle": "",
@@ -7272,7 +7433,8 @@
    },
    "sample": 2081,
    "registered": 1928,
-   "source": "ajout-manuel (notice Commission des sondages n°10327, Ifop-Fiducial pour LCI, Le Figaro et Sud Radio)"
+   "source": "ajout-manuel (notice Commission des sondages n°10327, Ifop-Fiducial pour LCI, Le Figaro et Sud Radio)",
+   "ajoute": "2026-10-21"
   },
   {
    "cle": "",
@@ -7316,7 +7478,8 @@
    },
    "sample": 2081,
    "registered": 1928,
-   "source": "ajout-manuel (notice Commission des sondages n°10327, Ifop-Fiducial pour LCI, Le Figaro et Sud Radio)"
+   "source": "ajout-manuel (notice Commission des sondages n°10327, Ifop-Fiducial pour LCI, Le Figaro et Sud Radio)",
+   "ajoute": "2026-10-21"
   },
   {
    "cle": "",
@@ -7360,7 +7523,8 @@
    },
    "sample": 2081,
    "registered": 1928,
-   "source": "ajout-manuel (notice Commission des sondages n°10327, Ifop-Fiducial pour LCI, Le Figaro et Sud Radio)"
+   "source": "ajout-manuel (notice Commission des sondages n°10327, Ifop-Fiducial pour LCI, Le Figaro et Sud Radio)",
+   "ajoute": "2026-10-21"
   },
   {
    "cle": "",
@@ -7404,7 +7568,8 @@
    },
    "sample": 2081,
    "registered": 1928,
-   "source": "ajout-manuel (notice Commission des sondages n°10327, Ifop-Fiducial pour LCI, Le Figaro et Sud Radio)"
+   "source": "ajout-manuel (notice Commission des sondages n°10327, Ifop-Fiducial pour LCI, Le Figaro et Sud Radio)",
+   "ajoute": "2026-10-21"
   },
   {
    "cle": "",
@@ -7448,7 +7613,8 @@
    },
    "sample": 973,
    "registered": null,
-   "source": "wikipedia-auto"
+   "source": "wikipedia-auto",
+   "ajoute": "2026-10-23"
   },
   {
    "cle": "",
@@ -7492,7 +7658,8 @@
    },
    "sample": 2094,
    "registered": null,
-   "source": "wikipedia-auto"
+   "source": "wikipedia-auto",
+   "ajoute": "2026-10-23"
   },
   {
    "cle": "",
@@ -7536,7 +7703,8 @@
    },
    "sample": 2094,
    "registered": null,
-   "source": "wikipedia-auto"
+   "source": "wikipedia-auto",
+   "ajoute": "2026-10-23"
   },
   {
    "cle": "",
@@ -7580,7 +7748,8 @@
    },
    "sample": 2094,
    "registered": null,
-   "source": "wikipedia-auto"
+   "source": "wikipedia-auto",
+   "ajoute": "2026-10-23"
   },
   {
    "cle": "",
@@ -7624,7 +7793,8 @@
    },
    "sample": 2094,
    "registered": null,
-   "source": "wikipedia-auto"
+   "source": "wikipedia-auto",
+   "ajoute": "2026-10-23"
   },
   {
    "cle": "",
@@ -7668,7 +7838,8 @@
    },
    "sample": 2094,
    "registered": null,
-   "source": "wikipedia-auto"
+   "source": "wikipedia-auto",
+   "ajoute": "2026-10-23"
   },
   {
    "cle": "",
@@ -7712,7 +7883,8 @@
    },
    "sample": 1500,
    "registered": null,
-   "source": "wikipedia-auto"
+   "source": "wikipedia-auto",
+   "ajoute": "2026-10-26"
   },
   {
    "cle": "",
@@ -7756,7 +7928,8 @@
    },
    "sample": 1500,
    "registered": null,
-   "source": "wikipedia-auto"
+   "source": "wikipedia-auto",
+   "ajoute": "2026-10-26"
   },
   {
    "cle": "",
@@ -7800,7 +7973,8 @@
    },
    "sample": 1500,
    "registered": null,
-   "source": "wikipedia-auto"
+   "source": "wikipedia-auto",
+   "ajoute": "2026-10-26"
   },
   {
    "cle": "",
@@ -7844,7 +8018,8 @@
    },
    "sample": 1500,
    "registered": null,
-   "source": "wikipedia-auto"
+   "source": "wikipedia-auto",
+   "ajoute": "2026-10-26"
   },
   {
    "cle": "",
@@ -7888,7 +8063,8 @@
    },
    "sample": 3000,
    "registered": null,
-   "source": "wikipedia-auto"
+   "source": "wikipedia-auto",
+   "ajoute": "2026-10-27"
   },
   {
    "cle": "",
@@ -7932,7 +8108,8 @@
    },
    "sample": 3000,
    "registered": null,
-   "source": "wikipedia-auto"
+   "source": "wikipedia-auto",
+   "ajoute": "2026-10-27"
   },
   {
    "cle": "",
@@ -7976,7 +8153,8 @@
    },
    "sample": 3000,
    "registered": null,
-   "source": "wikipedia-auto"
+   "source": "wikipedia-auto",
+   "ajoute": "2026-10-27"
   }
  ],
  "referenceRows": [

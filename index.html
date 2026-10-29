@@ -1586,6 +1586,7 @@ function buildTimeSeries(polls) {
   return { buckets, labels, series };
 }
 
+let legendToggle = false;
 // Légende cochable : décocher une courbe la masque sur le graphique uniquement.
 // --- Derniers sondages ajoutés ------------------------------------------------
 // Une ligne par vague (institut + date de fin de terrain). Ordre : date d'ajout
@@ -1632,11 +1633,13 @@ function renderChartLegend(series) {
   box.querySelectorAll("input[data-series]").forEach(inp => inp.addEventListener("change", () => {
     const label = series[+inp.getAttribute("data-series")].label;
     if (inp.checked) state.hiddenSeries.delete(label); else state.hiddenSeries.add(label);
+    legendToggle = true;
     render();
   }));
   box.querySelectorAll("[data-legend]").forEach(btn => btn.addEventListener("click", () => {
     if (btn.getAttribute("data-legend") === "all") series.forEach(s => state.hiddenSeries.delete(s.label));
     else series.forEach(s => state.hiddenSeries.add(s.label));
+    legendToggle = true;
     render();
   }));
 }
@@ -1695,7 +1698,9 @@ function renderChart(polls) {
       trendChartInstance.data.labels = labels;
       trendChartInstance.data.datasets = datasets;
       trendChartInstance.options.scales.y = yScale;
-      trendChartInstance.update();
+      // Cocher/décocher dans la légende : la courbe apparaît/disparaît sans animation.
+      trendChartInstance.update(legendToggle ? "none" : undefined);
+      legendToggle = false;
     } else {
       trendChartInstance = new Chart(canvas.getContext("2d"), {
         type: "line",

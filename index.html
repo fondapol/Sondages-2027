@@ -255,6 +255,7 @@
   .recent-wave { display: flex; justify-content: space-between; gap: 10px; padding: 5px 4px 5px 16px; font-size: 0.85rem; border-bottom: 1px dashed var(--border); }
   .recent-wave:last-child { border-bottom: 0; }
   .recent-inst { font-weight: 700; }
+  .recent-head { font-size: 0.72rem; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.03em; border-bottom: 1px solid var(--border); }
   .recent-meta { color: var(--muted); text-align: right; }
   footer { text-align: center; color: var(--muted); font-size: 0.76rem; margin-top: 24px; }
 </style>
@@ -349,9 +350,15 @@
           <input type="text" id="newPollInstitut" list="institutSuggest" placeholder="ex : Ifop">
           <datalist id="institutSuggest"></datalist>
         </div>
-        <div class="field">
-          <label>Date du sondage (fin de terrain)</label>
-          <input type="date" id="newPollDate">
+        <div style="display:flex; gap:10px;">
+          <div class="field" style="flex:1;">
+            <label>Début de terrain (optionnel)</label>
+            <input type="date" id="newPollStart">
+          </div>
+          <div class="field" style="flex:1;">
+            <label>Fin de terrain</label>
+            <input type="date" id="newPollDate">
+          </div>
         </div>
         <div style="display:flex; gap:10px;">
           <div class="field" style="flex:1;">
@@ -769,7 +776,7 @@
 
       <div class="card">
         <h2 style="margin-bottom:2px;">Derniers sondages ajoutés</h2>
-        <p class="hint" style="margin-top:0;">Dans l'ordre d'ajout à l'outil, du plus récent au plus ancien, regroupés par mois d'ajout.</p>
+        <p class="hint" style="margin-top:0;">Classés par date de terrain, du plus récent au plus ancien, regroupés par mois de fin de terrain.</p>
         <div id="recentPolls"></div>
       </div>
     </div>
@@ -1064,6 +1071,7 @@ function handleAddPoll() {
   const institut = document.getElementById("newPollInstitut").value.trim();
   const dateVal = document.getElementById("newPollDate").value;
   const date = parseFrenchDateInput(dateVal);
+  const debut = parseFrenchDateInput(document.getElementById("newPollStart").value);
   const sampleRaw = document.getElementById("newPollSample").value.trim();
   const registeredRaw = document.getElementById("newPollRegistered").value.trim();
   const sample = sampleRaw ? parseInt(sampleRaw.replace(/[^\d]/g, ""), 10) : null;
@@ -1110,7 +1118,7 @@ function handleAddPoll() {
   const poll = {
     cle: "", hypothese: hyp, institut, date, isReal: true,
     scores, blocSums: finalBlocSums, sample, registered: registered ?? null,
-    isManual: true, ajoute: todayStr()
+    isManual: true, ajoute: todayStr(), ...(debut && debut !== date ? { debut } : {})
   };
 
   dataset.polls.push(poll);
@@ -1119,6 +1127,7 @@ function handleAddPoll() {
 
   document.getElementById("newPollInstitut").value = "";
   document.getElementById("newPollDate").value = "";
+  document.getElementById("newPollStart").value = "";
   document.getElementById("newPollSample").value = "";
   document.getElementById("newPollRegistered").value = "";
   document.querySelectorAll('#newPollScoreGrid [data-score-cand]').forEach(inp => inp.value = "");
@@ -1589,32 +1598,42 @@ function buildTimeSeries(polls) {
 let legendToggle = false;
 // Légende cochable : décocher une courbe la masque sur le graphique uniquement.
 // --- Derniers sondages ajoutés ------------------------------------------------
-// Une ligne par vague (institut + date de fin de terrain). Ordre : date d'ajout
-// (champ « ajoute ») décroissante, puis ordre dans data.json (le plus tard ajouté d'abord).
+// Une ligne par vague (institut + date de fin de terrain), groupées par mois de fin de terrain.
 function renderRecentPolls() {
   const box = document.getElementById("recentPolls");
   if (!box) return;
   const waves = new Map();
   dataset.polls.forEach((p, idx) => {
     const k = p.institut + "|" + p.date + "|" + (p.isManual ? "m" : "");
-    if (!waves.has(k)) waves.set(k, { institut: p.institut, date: p.date, sample: p.sample, polls: [], idx, ajoute: p.ajoute || null, source: p.source || "", isManual: !!p.isManual });
+    if (!waves.has(k)) waves.set(k, { institut: p.institut, date: p.date, debut: p.debut || null, sample: p.sample, polls: [], idx, ajoute: p.ajoute || null, source: p.source || "", isManual: !!p.isManual });
     const w = waves.get(k);
     w.polls.push(p); w.idx = Math.max(w.idx, idx);
     if (p.ajoute && (!w.ajoute || p.ajoute > w.ajoute)) w.ajoute = p.ajoute;
+    if (p.debut && !w.debut) w.debut = p.debut;
   });
+  // Classement par date de terrain (fin, puis début), la plus récente d'abord ;
+  // les sondages saisis dans ce navigateur et pas encore publiés passent en tête.
+  const dayKey = str => { const d = str && parsePollDate(str); return d ? d.year * 10000 + d.month * 100 + d.day : 0; };
   const list = [...waves.values()].sort((a, b) =>
-    (b.isManual - a.isManual) || ((b.ajoute || "") > (a.ajoute || "") ? 1 : (b.ajoute || "") < (a.ajoute || "") ? -1 : b.idx - a.idx));
-  const monthOf = w => w.isManual ? "local" : (w.ajoute ? w.ajoute.slice(0, 7) : "inconnu");
+    (b.isManual - a.isManual) || dayKey(b.date) - dayKey(a.date) ||
+    dayKey(b.debut) - dayKey(a.debut) || b.idx - a.idx);
+  const monthOf = w => {
+    if (w.isManual) return "local";
+    const d = parsePollDate(w.date);
+    return d ? `${d.year}-${String(d.month).padStart(2, "0")}` : "inconnu";
+  };
   const groups = [];
   list.forEach(w => { const m = monthOf(w); let g = groups.find(x => x.m === m); if (!g) groups.push(g = { m, waves: [] }); g.waves.push(w); });
-  const monthTitle = m => m === "local" ? "Ajoutés dans ce navigateur, pas encore publiés" : m === "inconnu" ? "Date d'ajout inconnue" : monthLabelOf(m);
-  const terrain = str => { const d = parsePollDate(str); return d ? `${d.day} ${MONTH_SHORT[d.month - 1]} ${d.year}` : str; };
-  box.innerHTML = groups.map((g, gi) => `
+  const monthTitle = m => m === "local" ? "Ajoutés dans ce navigateur, pas encore publiés" : m === "inconnu" ? "Date inconnue" : monthLabelOf(m);
+  const fmt = (d, withYear) => `${d.day === 1 ? "1er" : d.day} ${MONTH_SHORT[d.month - 1]}${withYear ? " " + d.year : ""}`;
+  const terrain = w => { const e = parsePollDate(w.date); return e ? fmt(e, true) : w.date; };
+  box.innerHTML = groups.map(g => `
     <details class="recent-month">
       <summary><strong>${escapeHtml(monthTitle(g.m))}</strong> <span class="hint">· ${g.waves.length} sondage${g.waves.length > 1 ? "s" : ""}</span></summary>
       <div class="recent-list">
+        <div class="recent-wave recent-head"><span>Institut</span><span>Fin du terrain</span></div>
         ${g.waves.map(w => `
-          <div class="recent-wave"><span class="recent-inst">${escapeHtml(w.institut)}</span><span class="recent-meta">terrain jusqu'au ${terrain(w.date)}</span></div>`).join("")}
+          <div class="recent-wave"><span class="recent-inst">${escapeHtml(w.institut)}</span><span class="recent-meta">${terrain(w)}</span></div>`).join("")}
       </div>
     </details>`).join("") || '<p class="hint">Aucun sondage.</p>';
 }

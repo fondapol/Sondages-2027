@@ -255,6 +255,7 @@
   .recent-wave { display: flex; justify-content: space-between; gap: 10px; padding: 5px 4px 5px 16px; font-size: 0.85rem; border-bottom: 1px dashed var(--border); }
   .recent-wave:last-child { border-bottom: 0; }
   .recent-inst { font-weight: 700; }
+  .recent-head { font-size: 0.72rem; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.03em; border-bottom: 1px solid var(--border); }
   .recent-meta { color: var(--muted); text-align: right; }
   footer { text-align: center; color: var(--muted); font-size: 0.76rem; margin-top: 24px; }
 </style>
@@ -1625,20 +1626,14 @@ function renderRecentPolls() {
   list.forEach(w => { const m = monthOf(w); let g = groups.find(x => x.m === m); if (!g) groups.push(g = { m, waves: [] }); g.waves.push(w); });
   const monthTitle = m => m === "local" ? "Ajoutés dans ce navigateur, pas encore publiés" : m === "inconnu" ? "Date inconnue" : monthLabelOf(m);
   const fmt = (d, withYear) => `${d.day === 1 ? "1er" : d.day} ${MONTH_SHORT[d.month - 1]}${withYear ? " " + d.year : ""}`;
-  const terrain = w => {
-    const e = parsePollDate(w.date);
-    if (!e) return w.date;
-    const s = w.debut && parsePollDate(w.debut);
-    if (!s || (s.day === e.day && s.month === e.month && s.year === e.year)) return w.debut ? `le ${fmt(e, true)}` : `jusqu'au ${fmt(e, true)}`;
-    if (s.month === e.month && s.year === e.year) return `du ${s.day === 1 ? "1er" : s.day} au ${fmt(e, true)}`;
-    return `du ${fmt(s, s.year !== e.year)} au ${fmt(e, true)}`;
-  };
+  const terrain = w => { const e = parsePollDate(w.date); return e ? fmt(e, true) : w.date; };
   box.innerHTML = groups.map(g => `
     <details class="recent-month">
       <summary><strong>${escapeHtml(monthTitle(g.m))}</strong> <span class="hint">· ${g.waves.length} sondage${g.waves.length > 1 ? "s" : ""}</span></summary>
       <div class="recent-list">
+        <div class="recent-wave recent-head"><span>Institut</span><span>Fin du terrain</span></div>
         ${g.waves.map(w => `
-          <div class="recent-wave"><span class="recent-inst">${escapeHtml(w.institut)}</span><span class="recent-meta">terrain ${terrain(w)}</span></div>`).join("")}
+          <div class="recent-wave"><span class="recent-inst">${escapeHtml(w.institut)}</span><span class="recent-meta">${terrain(w)}</span></div>`).join("")}
       </div>
     </details>`).join("") || '<p class="hint">Aucun sondage.</p>';
 }

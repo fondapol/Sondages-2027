@@ -236,6 +236,31 @@
   .ws-refs { display: flex; flex-wrap: wrap; gap: 10px 16px; font-size: 0.82rem; }
   .ws-refs label { display: flex; flex-direction: column; gap: 4px; color: var(--muted); font-weight: 600; min-width: 0; }
   .ws-refs select { padding: 5px 8px; border: 1px solid var(--border); border-radius: 6px; font: inherit; color: var(--text); background: var(--card); max-width: 100%; }
+  /* Légende cochable du graphique Tendances */
+  .chart-legend { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; font-size: 0.8rem; margin: 4px 0 8px; }
+  .legend-item { display: inline-flex; align-items: center; gap: 5px; cursor: pointer; user-select: none; }
+  .legend-item input { margin: 0; width: 14px; height: 14px; }
+  .legend-swatch { display: inline-block; width: 12px; height: 12px; border-radius: 3px; }
+  .legend-item.off { color: var(--muted); text-decoration: line-through; }
+  .legend-item.off .legend-swatch { opacity: 0.35; }
+  .legend-actions { margin-left: auto; }
+  /* Derniers sondages ajoutés */
+  .recent-month { border-top: 1px solid var(--border); padding: 8px 0; }
+  .recent-month > summary { cursor: pointer; font-size: 0.9rem; }
+  .recent-list { display: flex; flex-direction: column; margin-top: 6px; }
+  .recent-wave > summary { display: grid; grid-template-columns: 110px minmax(110px, 160px) 1fr auto; gap: 10px; align-items: baseline; padding: 6px 4px; border-radius: 6px; cursor: pointer; font-size: 0.85rem; list-style: none; }
+  .recent-wave > summary::-webkit-details-marker { display: none; }
+  .recent-wave > summary:hover { background: #f4f6f9; }
+  .recent-added { color: var(--muted); font-variant-numeric: tabular-nums; }
+  .recent-inst { font-weight: 700; }
+  .recent-meta { color: var(--text); min-width: 0; }
+  .recent-src { font-size: 0.72rem; color: var(--muted); border: 1px solid var(--border); border-radius: 999px; padding: 1px 8px; white-space: nowrap; }
+  .recent-hyps { margin: 2px 0 8px 114px; padding-left: 16px; font-size: 0.8rem; display: flex; flex-direction: column; gap: 4px; }
+  @media (max-width: 880px) {
+    .recent-wave > summary { grid-template-columns: 1fr auto; }
+    .recent-added, .recent-meta { grid-column: 1 / -1; }
+    .recent-hyps { margin-left: 0; }
+  }
   footer { text-align: center; color: var(--muted); font-size: 0.76rem; margin-top: 24px; }
 </style>
 </head>
@@ -383,6 +408,7 @@
           </div>
         </div>
         <p class="hint" style="margin-top:0;" id="chartSubHint">Avec les mêmes filtres (période, candidats, instituts, mode de simulation) que le reste de la page.</p>
+        <div class="chart-legend" id="chartLegend" aria-label="Courbes affichées"></div>
         <canvas id="trendChart" height="366" style="display: block; box-sizing: border-box; height: 293px; width: 800px;" width="1000"></canvas>
         <p class="hint" id="chartEmptyHint" style="display:none;">Pas assez de données pour tracer une évolution avec les filtres actuels.</p>
       </div>
@@ -745,6 +771,12 @@
           <button class="primary" id="openWorkshopBtn" type="button">Ouvrir</button>
         </div>
       </div>
+
+      <div class="card">
+        <h2 style="margin-bottom:2px;">Derniers sondages ajoutés</h2>
+        <p class="hint" style="margin-top:0;">Dans l'ordre d'ajout à l'outil, du plus récent au plus ancien, regroupés par mois d'ajout. Cliquez sur un sondage pour voir ses hypothèses.</p>
+        <div id="recentPolls"></div>
+      </div>
     </div>
   </div>
 
@@ -1024,7 +1056,7 @@ function renderManualPollsList() {
       if (pos !== -1) dataset.polls.splice(pos, 1);
       saveManualPolls();
       renderManualPollsList();
-      renderInstitutList(); renderMonthList(); render();
+      renderInstitutList(); renderMonthList(); render(); renderRecentPolls();
     });
   });
 }
@@ -1083,7 +1115,7 @@ function handleAddPoll() {
   const poll = {
     cle: "", hypothese: hyp, institut, date, isReal: true,
     scores, blocSums: finalBlocSums, sample, registered: registered ?? null,
-    isManual: true
+    isManual: true, ajoute: todayStr()
   };
 
   dataset.polls.push(poll);
@@ -1101,7 +1133,7 @@ function handleAddPoll() {
     (totalBloc > 0 && (totalBloc < 90 || totalBloc > 106) ? ` <span style="color:#a05a00;">⚠️ Le total des blocs (${totalBloc.toFixed(1)}%) semble inhabituel — vérifiez les scores saisis.</span>` : '');
 
   renderManualPollsList();
-  renderInstitutList(); renderMonthList(); render();
+  renderInstitutList(); renderMonthList(); render(); renderRecentPolls();
 }
 
 
@@ -1559,6 +1591,74 @@ function buildTimeSeries(polls) {
   return { buckets, labels, series };
 }
 
+// Légende cochable : décocher une courbe la masque sur le graphique uniquement.
+// --- Derniers sondages ajoutés ------------------------------------------------
+// Une ligne par vague (institut + date de fin de terrain). Ordre : date d'ajout
+// (champ « ajoute ») décroissante, puis ordre dans data.json (le plus tard ajouté d'abord).
+function renderRecentPolls() {
+  const box = document.getElementById("recentPolls");
+  if (!box) return;
+  const waves = new Map();
+  dataset.polls.forEach((p, idx) => {
+    const k = p.institut + "|" + p.date + "|" + (p.isManual ? "m" : "");
+    if (!waves.has(k)) waves.set(k, { institut: p.institut, date: p.date, sample: p.sample, polls: [], idx, ajoute: p.ajoute || null, source: p.source || "", isManual: !!p.isManual });
+    const w = waves.get(k);
+    w.polls.push(p); w.idx = Math.max(w.idx, idx);
+    if (p.ajoute && (!w.ajoute || p.ajoute > w.ajoute)) w.ajoute = p.ajoute;
+  });
+  const list = [...waves.values()].sort((a, b) =>
+    (b.isManual - a.isManual) || ((b.ajoute || "") > (a.ajoute || "") ? 1 : (b.ajoute || "") < (a.ajoute || "") ? -1 : b.idx - a.idx));
+  const monthOf = w => w.isManual ? "local" : (w.ajoute ? w.ajoute.slice(0, 7) : "inconnu");
+  const groups = [];
+  list.forEach(w => { const m = monthOf(w); let g = groups.find(x => x.m === m); if (!g) groups.push(g = { m, waves: [] }); g.waves.push(w); });
+  const monthTitle = m => m === "local" ? "Ajoutés dans ce navigateur, pas encore publiés" : m === "inconnu" ? "Date d'ajout inconnue" : monthLabelOf(m);
+  const dayShort = iso => { const [y, mo, d] = iso.split("-").map(Number); return `${d} ${MONTH_SHORT[mo - 1]}`; };
+  const srcLabel = w => w.isManual ? "local" : w.source.startsWith("ajout-manuel") ? "ajout manuel" : w.source === "wikipedia-auto" ? "Wikipédia" : "données d'origine";
+  const terrain = str => { const d = parsePollDate(str); return d ? `${d.day} ${MONTH_SHORT[d.month - 1]} ${d.year}` : str; };
+  box.innerHTML = groups.map((g, gi) => `
+    <details class="recent-month"${gi === 0 ? " open" : ""}>
+      <summary><strong>${escapeHtml(monthTitle(g.m))}</strong> <span class="hint">· ${g.waves.length} sondage${g.waves.length > 1 ? "s" : ""}, ${g.waves.reduce((a, w) => a + w.polls.length, 0)} hypothèses</span></summary>
+      <div class="recent-list">
+        ${g.waves.map(w => `
+          <details class="recent-wave">
+            <summary>
+              <span class="recent-added">${w.isManual ? "—" : w.ajoute ? "ajouté le " + dayShort(w.ajoute) : ""}</span>
+              <span class="recent-inst">${escapeHtml(w.institut)}</span>
+              <span class="recent-meta">terrain jusqu'au ${terrain(w.date)} · ${w.polls.length} hyp.${w.sample ? ` · ${Number(w.sample).toLocaleString("fr-FR")} pers.` : ""}</span>
+              <span class="recent-src">${srcLabel(w)}</span>
+            </summary>
+            <ul class="recent-hyps">${w.polls.map(p => {
+              const sc = Object.entries(p.scores).filter(([, v]) => v !== null && v !== undefined).sort((a, b) => b[1] - a[1]);
+              return `<li><span class="hint">${escapeHtml(p.hypothese)}</span><br>${sc.map(([n, v]) => `${escapeHtml(n)} ${String(v).replace(".", ",")}`).join(" · ")}</li>`;
+            }).join("")}</ul>
+          </details>`).join("")}
+      </div>
+    </details>`).join("") || '<p class="hint">Aucun sondage.</p>';
+}
+
+function renderChartLegend(series) {
+  const box = document.getElementById("chartLegend");
+  if (!box) return;
+  box.innerHTML = series.map((s, i) => {
+    const on = !state.hiddenSeries.has(s.label);
+    return `<label class="legend-item${on ? "" : " off"}" title="${on ? "Masquer" : "Afficher"} cette courbe (les calculs ne changent pas)">
+      <input type="checkbox" data-series="${i}"${on ? " checked" : ""}>
+      <span class="legend-swatch" style="background:${s.color}"></span>${s.label}</label>`;
+  }).join("") + (series.length > 1
+    ? `<span class="legend-actions"><button class="mini-btn" type="button" data-legend="all">tout afficher</button> · <button class="mini-btn" type="button" data-legend="none">tout masquer</button></span>`
+    : "");
+  box.querySelectorAll("input[data-series]").forEach(inp => inp.addEventListener("change", () => {
+    const label = series[+inp.getAttribute("data-series")].label;
+    if (inp.checked) state.hiddenSeries.delete(label); else state.hiddenSeries.add(label);
+    render();
+  }));
+  box.querySelectorAll("[data-legend]").forEach(btn => btn.addEventListener("click", () => {
+    if (btn.getAttribute("data-legend") === "all") series.forEach(s => state.hiddenSeries.delete(s.label));
+    else series.forEach(s => state.hiddenSeries.add(s.label));
+    render();
+  }));
+}
+
 function renderChart(polls) {
   const canvas = document.getElementById("trendChart");
   const emptyHint = document.getElementById("chartEmptyHint");
@@ -1583,10 +1683,12 @@ function renderChart(polls) {
   emptyHint.style.display = "none";
 
   const subHint = document.getElementById("chartSubHint");
-  subHint.textContent = `Moyenne ${useWeeklyBuckets() ? "hebdomadaire" : "mensuelle"} sur ${periodLabel()}, avec les mêmes filtres (candidats, instituts, mode de simulation) que le reste de la page. Échelle fixe à partir de 0 %, pour comparer les évolutions à la même mesure.`;
+  subHint.textContent = `Moyenne ${useWeeklyBuckets() ? "hebdomadaire" : "mensuelle"} sur ${periodLabel()}, avec les mêmes filtres (candidats, instituts, mode de simulation) que le reste de la page. Échelle fixe à partir de 0 %, pour comparer les évolutions à la même mesure. Décochez une courbe dans la légende pour la masquer (les calculs ne changent pas).`;
 
+  renderChartLegend(series);
   const datasets = series.map(s => ({
     label: s.label,
+    hidden: state.hiddenSeries.has(s.label), // masquée à l'affichage seulement, calculs inchangés
     data: s.data,
     borderColor: s.color,
     backgroundColor: s.color,
@@ -1617,7 +1719,7 @@ function renderChart(polls) {
         options: {
           responsive: true,
           interaction: { mode: "index", intersect: false },
-          plugins: { legend: { position: "bottom", labels: { boxWidth: 12, font: { size: 11 } } } },
+          plugins: { legend: { display: false } }, // remplacée par la légende cochable (#chartLegend)
           scales: { y: yScale }
         }
       });
@@ -2021,6 +2123,7 @@ REF_2022 = dataset.referenceRows.find(r => /2022/.test(r.hypothese)) || null;
   hypSearch: "",
   excludeUnselected: true,
   chartMode: "bloc",
+  hiddenSeries: new Set(), // courbes masquées sur le graphique Tendances (affichage seulement)
   subdivideBloc: false
 };
 
@@ -2031,6 +2134,7 @@ renderNewPollScoreGrid();
 renderInstitutSuggestions();
 renderManualPollsList();
 render();
+renderRecentPolls();
 makeCardsCollapsible();
 }
 

@@ -249,7 +249,6 @@
   .legend-item.off { color: var(--muted); }
   .legend-actions { color: var(--muted); }
   /* Derniers sondages ajoutés */
-  .recent-section { margin: 14px 0 4px; font-size: 0.78rem; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.03em; }
   .recent-month { border-top: 1px solid var(--border); padding: 8px 0; }
   .recent-month > summary { cursor: pointer; font-size: 0.9rem; }
   .recent-list { display: flex; flex-direction: column; margin-top: 6px; }
@@ -776,7 +775,7 @@
 
       <div class="card">
         <h2 style="margin-bottom:2px;">Derniers sondages ajoutés</h2>
-        <p class="hint" style="margin-top:0;">Dans l'ordre d'ajout à l'outil, du plus récent au plus ancien, regroupés par mois d'ajout.</p>
+        <p class="hint" style="margin-top:0;">Classés par date de terrain, du plus récent au plus ancien, regroupés par mois de fin de terrain.</p>
         <div id="recentPolls"></div>
       </div>
     </div>
@@ -1598,8 +1597,7 @@ function buildTimeSeries(polls) {
 let legendToggle = false;
 // Légende cochable : décocher une courbe la masque sur le graphique uniquement.
 // --- Derniers sondages ajoutés ------------------------------------------------
-// Une ligne par vague (institut + date de fin de terrain). Ordre : date d'ajout
-// (champ « ajoute ») décroissante, puis ordre dans data.json (le plus tard ajouté d'abord).
+// Une ligne par vague (institut + date de fin de terrain), groupées par mois de fin de terrain.
 function renderRecentPolls() {
   const box = document.getElementById("recentPolls");
   if (!box) return;
@@ -1612,23 +1610,20 @@ function renderRecentPolls() {
     if (p.ajoute && (!w.ajoute || p.ajoute > w.ajoute)) w.ajoute = p.ajoute;
     if (p.debut && !w.debut) w.debut = p.debut;
   });
-  // Les sondages déjà présents à la mise en ligne de l'outil (première date d'ajout)
-  // n'ont pas d'ordre d'ajout significatif : ils sont classés par mois de terrain.
-  const launch = dataset.polls.reduce((m, p) => p.ajoute && (!m || p.ajoute < m) ? p.ajoute : m, null);
-  const isLaunch = w => !w.isManual && w.ajoute === launch;
-  const endKey = w => { const d = parsePollDate(w.date); return d ? d.year * 10000 + d.month * 100 + d.day : 0; };
+  // Classement par date de terrain (fin, puis début), la plus récente d'abord ;
+  // les sondages saisis dans ce navigateur et pas encore publiés passent en tête.
+  const dayKey = str => { const d = str && parsePollDate(str); return d ? d.year * 10000 + d.month * 100 + d.day : 0; };
   const list = [...waves.values()].sort((a, b) =>
-    (b.isManual - a.isManual) || (isLaunch(a) - isLaunch(b)) ||
-    (isLaunch(a) ? endKey(b) - endKey(a) || b.idx - a.idx
-      : (b.ajoute || "") > (a.ajoute || "") ? 1 : (b.ajoute || "") < (a.ajoute || "") ? -1 : b.idx - a.idx));
+    (b.isManual - a.isManual) || dayKey(b.date) - dayKey(a.date) ||
+    dayKey(b.debut) - dayKey(a.debut) || b.idx - a.idx);
   const monthOf = w => {
     if (w.isManual) return "local";
-    if (isLaunch(w)) { const d = parsePollDate(w.date); return d ? `t${d.year}-${String(d.month).padStart(2, "0")}` : "inconnu"; }
-    return w.ajoute ? w.ajoute.slice(0, 7) : "inconnu";
+    const d = parsePollDate(w.date);
+    return d ? `${d.year}-${String(d.month).padStart(2, "0")}` : "inconnu";
   };
   const groups = [];
   list.forEach(w => { const m = monthOf(w); let g = groups.find(x => x.m === m); if (!g) groups.push(g = { m, waves: [] }); g.waves.push(w); });
-  const monthTitle = m => m === "local" ? "Ajoutés dans ce navigateur, pas encore publiés" : m === "inconnu" ? "Date inconnue" : monthLabelOf(m.replace(/^t/, ""));
+  const monthTitle = m => m === "local" ? "Ajoutés dans ce navigateur, pas encore publiés" : m === "inconnu" ? "Date inconnue" : monthLabelOf(m);
   const fmt = (d, withYear) => `${d.day === 1 ? "1er" : d.day} ${MONTH_SHORT[d.month - 1]}${withYear ? " " + d.year : ""}`;
   const terrain = w => {
     const e = parsePollDate(w.date);
@@ -1638,10 +1633,7 @@ function renderRecentPolls() {
     if (s.month === e.month && s.year === e.year) return `du ${s.day === 1 ? "1er" : s.day} au ${fmt(e, true)}`;
     return `du ${fmt(s, s.year !== e.year)} au ${fmt(e, true)}`;
   };
-  const launchLabel = launch ? (() => { const [y, mo, d] = launch.split("-").map(Number); return `${d} ${MONTH_SHORT[mo - 1]} ${y}`; })() : "";
-  let launchHeaderDone = false;
-  box.innerHTML = groups.map((g, gi) => (g.m.startsWith("t") && !launchHeaderDone && (launchHeaderDone = true)
-      ? `<p class="recent-section">Déjà présents à la mise en ligne de l'outil (${launchLabel}), classés par mois de terrain</p>` : "") + `
+  box.innerHTML = groups.map(g => `
     <details class="recent-month">
       <summary><strong>${escapeHtml(monthTitle(g.m))}</strong> <span class="hint">· ${g.waves.length} sondage${g.waves.length > 1 ? "s" : ""}</span></summary>
       <div class="recent-list">

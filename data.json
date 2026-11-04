@@ -134,6 +134,12 @@
    "name": "Polony",
    "bloc": "DIVERS",
    "subBloc": "Divers"
+  },
+  {
+   "name": "Lagarde",
+   "bloc": "BLOC DROITE",
+   "subBloc": "Droite classique",
+   "subBlocAuto": true
   }
  ],
  "polls": [

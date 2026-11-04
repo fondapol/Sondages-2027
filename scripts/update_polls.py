@@ -333,13 +333,24 @@ def fetch_wikipedia_table():
     print(f"[diag] {len(tables)} tableau(x) sur la page ; tailles : {[t.shape for t in tables[:8]]}")
 
     empty_match = False
+    # Tous les tableaux de sondages non vides (mois précédents compris) servent à compléter
+    # les dates de début de terrain ; seul le premier (le plus récent) sert à importer.
+    OTHER_POLL_TABLES.clear()
+    found = None
     for t in tables:
         t = normalize_table(t)
         if t is None:
             continue
         if len(t) > 0:
-            return t
-        empty_match = True  # bon en-tête mais aucune ligne lue : mise en page modifiée
+            if found is None:
+                found = t
+            else:
+                OTHER_POLL_TABLES.append(t)
+        elif found is None:
+            empty_match = True
+    if found is not None:
+        print(f"[diag] {len(OTHER_POLL_TABLES)} autre(s) tableau(x) lu(s) pour les dates de début de terrain.")
+        return found
 
     if empty_match:
         # Le tableau a le bon en-tête mais pandas n'y lit aucune ligne (lignes en <th>,
@@ -353,6 +364,28 @@ def fetch_wikipedia_table():
         "Aucun tableau de sondages identifiable (colonnes 'firm'/'date' introuvables ou vides). "
         f"{len(tables)} tableau(x) trouvé(s) au total, aucun ne correspond."
     )
+
+
+OTHER_POLL_TABLES = []
+
+
+def fill_start_dates(df, polls):
+    """Complète « debut » pour les sondages (même institut, même fin de terrain) d'un tableau."""
+    filled = 0
+    for _, row in df.iterrows():
+        firm = str(row.get("Polling firm", "")).strip()
+        field = str(row.get("Fieldwork date", "")).strip()
+        if not firm or firm.lower() == "nan":
+            continue
+        end = parse_date_range(field)
+        start = parse_start_date(field) or end
+        if not end:
+            continue
+        for p in polls:
+            if not p.get("debut") and p.get("date") == end and p.get("institut", "").lower() == firm.lower():
+                p["debut"] = start
+                filled += 1
+    return filled
 
 
 def normalize_table(t):
@@ -571,6 +604,9 @@ def main():
             "ajoute": datetime.now().strftime("%Y-%m-%d"),
             **({"debut": current_start} if current_start else {}),
         })
+
+    for t in OTHER_POLL_TABLES:
+        filled_starts += fill_start_dates(t, data["polls"])
 
     write_pr_notes(newly_created, known_candidates, skipped_rows, filled_starts)
     if filled_starts:

@@ -330,30 +330,103 @@ def fetch_wikipedia_table():
     tables = pd.read_html(io.StringIO(html))
     if not tables:
         raise RuntimeError("Aucun tableau trouvé sur la page.")
+    print(f"[diag] {len(tables)} tableau(x) sur la page ; tailles : {[t.shape for t in tables[:8]]}")
 
+    empty_match = False
     for t in tables:
-        if isinstance(t.columns, pd.MultiIndex):
-            t = t.copy()
-            t.columns = [c[0] if isinstance(c, tuple) else c for c in t.columns]
-        cols_lower = [str(c).lower() for c in t.columns]
-        has_firm = any("firm" in c for c in cols_lower)
-        has_date = any("date" in c or "fieldwork" in c for c in cols_lower)
-        if has_firm and has_date:
-            rename = {}
-            for c in t.columns:
-                cl = str(c).lower()
-                if "firm" in cl:
-                    rename[c] = "Polling firm"
-                elif "date" in cl or "fieldwork" in cl:
-                    rename[c] = "Fieldwork date"
-                elif "sample" in cl:
-                    rename[c] = "Sample size"
-            return t.rename(columns=rename)
+        t = normalize_table(t)
+        if t is None:
+            continue
+        if len(t) > 0:
+            return t
+        empty_match = True  # bon en-tête mais aucune ligne lue : mise en page modifiée
+
+    if empty_match:
+        # Le tableau a le bon en-tête mais pandas n'y lit aucune ligne (lignes en <th>,
+        # en-tête séparé du corps…) : on le reconstruit cellule par cellule.
+        print("[diag] Tableau de sondages vide à la lecture standard : reconstruction ligne par ligne.")
+        t = rebuild_poll_table(html, pd, io)
+        if t is not None and len(t) > 0:
+            return t
 
     raise RuntimeError(
-        "Aucun tableau de sondages identifiable (colonnes 'firm'/'date' introuvables). "
+        "Aucun tableau de sondages identifiable (colonnes 'firm'/'date' introuvables ou vides). "
         f"{len(tables)} tableau(x) trouvé(s) au total, aucun ne correspond."
     )
+
+
+def normalize_table(t):
+    """Aplatit l'en-tête et renomme les colonnes clés ; None si ce n'est pas un tableau de sondages."""
+    import pandas as pd
+    if isinstance(t.columns, pd.MultiIndex):
+        t = t.copy()
+        t.columns = [c[0] if isinstance(c, tuple) else c for c in t.columns]
+    cols_lower = [str(c).lower() for c in t.columns]
+    has_firm = any("firm" in c for c in cols_lower)
+    has_date = any("date" in c or "fieldwork" in c for c in cols_lower)
+    if not (has_firm and has_date):
+        return None
+    rename = {}
+    for c in t.columns:
+        cl = str(c).lower()
+        if "firm" in cl:
+            rename[c] = "Polling firm"
+        elif "date" in cl or "fieldwork" in cl:
+            rename[c] = "Fieldwork date"
+        elif "sample" in cl:
+            rename[c] = "Sample size"
+    return t.rename(columns=rename)
+
+
+DATE_CELL = re.compile(r"\b\d{1,2}\s+[A-Z][a-z]{2,8}\s+\d{4}\b")
+
+
+def rebuild_poll_table(html, pd, io):
+    """Reconstruit le premier tableau de sondages : l'en-tête = lignes avant la première
+    date de terrain, le corps = toutes les lignes suivantes (y compris celles d'un tableau
+    voisin si l'en-tête a été séparé du corps), toutes les cellules du corps en <td>."""
+    from bs4 import BeautifulSoup
+    soup = BeautifulSoup(html, "html.parser")
+    tables = soup.find_all("table")
+    for i, table in enumerate(tables):
+        rows = table.find_all("tr")
+        head_text = " ".join(r.get_text(" ", strip=True).lower() for r in rows[:3])
+        if "firm" not in head_text or ("date" not in head_text and "fieldwork" not in head_text):
+            continue
+        body_start = next((k for k, r in enumerate(rows) if DATE_CELL.search(r.get_text(" ", strip=True))), None)
+        if body_start is None:
+            # En-tête seul : le corps est dans le tableau suivant.
+            nxt = tables[i + 1] if i + 1 < len(tables) else None
+            if nxt is None:
+                continue
+            body_rows = nxt.find_all("tr")
+            head_rows = rows
+        else:
+            head_rows, body_rows = rows[:body_start], rows[body_start:]
+        if not head_rows or not body_rows:
+            continue
+        new = soup.new_tag("table")
+        thead, tbody = soup.new_tag("thead"), soup.new_tag("tbody")
+        for r in head_rows:
+            for c in r.find_all("td"):
+                c.name = "th"
+            thead.append(r.extract() if r.parent else r)
+        for r in body_rows:
+            for c in r.find_all("th"):
+                c.name = "td"
+            tbody.append(r.extract() if r.parent else r)
+        new.append(thead)
+        new.append(tbody)
+        try:
+            t = pd.read_html(io.StringIO(str(new)), header=list(range(len(head_rows))))[0]
+        except Exception as e:
+            print(f"[diag] Reconstruction impossible : {e}")
+            return None
+        t = normalize_table(t)
+        if t is not None:
+            print(f"[diag] Tableau reconstruit : {len(t)} lignes ({len(head_rows)} ligne(s) d'en-tête).")
+        return t
+    return None
 
 
 def main():

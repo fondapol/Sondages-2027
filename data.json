@@ -2270,7 +2270,7 @@
    "cle": "",
    "hypothese": "Hypothèse 13 : Tondelier, Glucksmann, Attal, Philippe, Le Pen",
    "institut": "Elabe",
-   "date": "7/11/26",
+   "date": "7/10/26",
    "isReal": true,
    "scores": {
     "Mélenchon": 14.5,
@@ -2310,7 +2310,8 @@
    },
    "sample": 1503,
    "registered": 1390,
-   "ajoute": "2026-09-16"
+   "ajoute": "2026-09-16",
+   "debut": "7/9/26"
   },
   {
    "cle": "",
@@ -2547,7 +2548,7 @@
    "cle": "",
    "hypothese": "Hypothèse 14 : Philippe (centre uni), Glucksmann, Villepin",
    "institut": "Elabe",
-   "date": "7/11/26",
+   "date": "7/10/26",
    "isReal": true,
    "scores": {
     "Mélenchon": 16,
@@ -2587,7 +2588,8 @@
    },
    "sample": 1503,
    "registered": 1390,
-   "ajoute": "2026-09-16"
+   "ajoute": "2026-09-16",
+   "debut": "7/9/26"
   },
   {
    "cle": "",
@@ -2639,7 +2641,7 @@
    "cle": "",
    "hypothese": "Hypothèse unique 15: Attal (centre uni), Glucksmann, Villepin",
    "institut": "Elabe",
-   "date": "7/11/26",
+   "date": "7/10/26",
    "isReal": true,
    "scores": {
     "Mélenchon": 14.5,
@@ -2679,7 +2681,8 @@
    },
    "sample": 1503,
    "registered": 1390,
-   "ajoute": "2026-09-16"
+   "ajoute": "2026-09-16",
+   "debut": "7/9/26"
   },
   {
    "cle": "",
@@ -3008,7 +3011,7 @@
    "cle": "",
    "hypothese": "Hypothèse unique 18 : Tondelier, Hollande, Philippe et Le Pen",
    "institut": "Elabe",
-   "date": "7/11/26",
+   "date": "7/10/26",
    "isReal": true,
    "scores": {
     "Mélenchon": 15,
@@ -3048,13 +3051,14 @@
    },
    "sample": 1503,
    "registered": 1390,
-   "ajoute": "2026-09-16"
+   "ajoute": "2026-09-16",
+   "debut": "7/9/26"
   },
   {
    "cle": "",
    "hypothese": "Hypothèse unique 19 : Ruffin, Hollande, Phillipe, Le Pen",
    "institut": "Elabe",
-   "date": "7/11/26",
+   "date": "7/10/26",
    "isReal": true,
    "scores": {
     "Mélenchon": 14.5,
@@ -3094,13 +3098,14 @@
    },
    "sample": 1503,
    "registered": 1390,
-   "ajoute": "2026-09-16"
+   "ajoute": "2026-09-16",
+   "debut": "7/9/26"
   },
   {
    "cle": "",
    "hypothese": "Hypothèse unique 20 : Ruffin, Hollande, Attal, Le Pen",
    "institut": "Elabe",
-   "date": "7/11/26",
+   "date": "7/10/26",
    "isReal": true,
    "scores": {
     "Mélenchon": 15,
@@ -3140,7 +3145,8 @@
    },
    "sample": 1503,
    "registered": 1390,
-   "ajoute": "2026-09-16"
+   "ajoute": "2026-09-16",
+   "debut": "7/9/26"
   },
   {
    "cle": "",

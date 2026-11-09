@@ -140,6 +140,12 @@
    "bloc": "BLOC DROITE",
    "subBloc": "Droite classique",
    "subBlocAuto": true
+  },
+  {
+   "name": "Riner",
+   "bloc": "CENTRE",
+   "subBloc": "Centre gauche",
+   "subBlocAuto": true
   }
  ],
  "polls": [

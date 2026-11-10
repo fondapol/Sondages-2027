@@ -138,8 +138,7 @@
   {
    "name": "Lagarde",
    "bloc": "BLOC DROITE",
-   "subBloc": "Droite classique",
-   "subBlocAuto": true
+   "subBloc": "Droite classique"
   },
   {
    "name": "Riner",

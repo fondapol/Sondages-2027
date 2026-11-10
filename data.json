@@ -145,6 +145,12 @@
    "bloc": "CENTRE",
    "subBloc": "Centre gauche",
    "subBlocAuto": true
+  },
+  {
+   "name": "Philippot",
+   "bloc": "BLOC DROITE",
+   "subBloc": "Droite radicale",
+   "subBlocAuto": true
   }
  ],
  "polls": [

@@ -149,8 +149,7 @@
   {
    "name": "Philippot",
    "bloc": "BLOC DROITE",
-   "subBloc": "Droite radicale",
-   "subBlocAuto": true
+   "subBloc": "Droite radicale"
   }
  ],
  "polls": [

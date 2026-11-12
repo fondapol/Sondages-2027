@@ -142,9 +142,8 @@
   },
   {
    "name": "Riner",
-   "bloc": "CENTRE",
-   "subBloc": "Centre gauche",
-   "subBlocAuto": true
+   "bloc": "DIVERS",
+   "subBloc": "Divers"
   },
   {
    "name": "Philippot",

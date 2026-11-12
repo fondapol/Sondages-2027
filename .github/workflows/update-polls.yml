@@ -2,8 +2,9 @@ name: Mise à jour quotidienne des sondages
 
 on:
   schedule:
-    # Tous les jours à 7h00 (heure de Paris, UTC+1 ou +2 selon la saison — ici 6h UTC)
-    - cron: "0 6 * * *"
+    # Tous les jours à 5h17 UTC = 6h17 à Paris en hiver, 7h17 en été.
+    # Minute « décalée » exprès : GitHub retarde souvent les tâches programmées à l'heure pile.
+    - cron: "17 5 * * *"
   workflow_dispatch: {} # permet aussi de le lancer manuellement depuis l'onglet "Actions"
 
 permissions:

@@ -485,7 +485,7 @@ def main():
     header = list(df.columns)
     # Colonnes sans vrai nom de candidat (ex. « Unnamed: 21_level_0 » créée par pandas
     # pour une cellule fusionnée, « Lead », « Others ») : jamais traitées comme candidat.
-    NON_CANDIDATE = re.compile(r"unnamed|_level_\d|^\s*\d*\s*$|^(lead|others?|abst\w*|blank|none|n/?a)\b", re.IGNORECASE)
+    NON_CANDIDATE = re.compile(r"unnamed|_level_\d|^\s*\d*\s*$|^(lead|others?|abs(?:t\w*)?\.?|blank|none|n/?a)\b", re.IGNORECASE)
     other_cols = [c for c in header if c not in ("Polling firm", "Fieldwork date", "Sample size")]
     junk_cols = [c for c in other_cols if NON_CANDIDATE.search(str(c))]
     candidate_cols = [c for c in other_cols if c not in junk_cols]

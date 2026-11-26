@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="fr"><head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Simulateur de reports de voix — Présidentielle 2027</title>
+<style>
+  :root {
+    --bg: #f4f6f9; --card: #ffffff; --accent: #2b5fd9; --accent-dark: #1c3f99;
+    --text: #1f2430; --muted: #6b7280; --border: #e2e5ea;
+    --gauche: #e0473e; --centre: #e8a83c; --droite: #2b6fe0; --divers: #7a6aa8;
+    --ok: #1f8a4c; --warn: #b45309; --a: #2b5fd9; --b: #c2410c;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: var(--bg); color: var(--text); padding: 20px; overflow-x: hidden; }
+  .wrap { max-width: 1200px; margin: 0 auto; }
+  h1 { font-size: 1.5rem; margin: 0 0 2px; }
+  .subtitle { color: var(--muted); margin: 0 0 6px; font-size: 0.92rem; max-width: 820px; }
+  .backlink { display: inline-block; font-size: 0.85rem; color: var(--accent); text-decoration: none; font-weight: 600; margin-bottom: 18px; }
+  .backlink:hover { text-decoration: underline; }
+  .step-title { display: flex; align-items: baseline; gap: 10px; margin: 26px 0 10px; }
+  .step-title .num { background: var(--accent); color: #fff; border-radius: 999px; width: 26px; height: 26px; display: inline-flex;
+    align-items: center; justify-content: center; font-weight: 700; font-size: 0.9rem; flex: none; }
+  .step-title h2 { font-size: 1.15rem; margin: 0; }
+  .step-title p { margin: 0; color: var(--muted); font-size: 0.85rem; }
+  .grid { display: grid; grid-template-columns: 330px 1fr; gap: 16px; align-items: start; }
+  .grid > div { min-width: 0; }
+  @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } body { padding: 14px; } }
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 16px 18px; margin-bottom: 16px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04); }
+  .card h3 { font-size: 0.95rem; margin: 0 0 8px; }
+  .hint { color: var(--muted); font-size: 0.78rem; line-height: 1.4; }
+  select, input[type="number"] { font: inherit; font-size: 0.88rem; border: 1px solid var(--border); border-radius: 6px; padding: 5px 7px; background: #fff; color: var(--text); }
+  select { width: 100%; }
+  input[type="number"] { width: 74px; text-align: right; font-variant-numeric: tabular-nums; }
+  input[type="number"].wide { width: 120px; }
+  button { font: inherit; font-size: 0.85rem; border-radius: 7px; border: 1px solid var(--border); background: #fff; color: var(--text); padding: 6px 12px; cursor: pointer; }
+  button:hover { border-color: var(--accent); color: var(--accent); }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  button.primary:hover { background: var(--accent-dark); color: #fff; }
+  .mini { font-size: 0.72rem; padding: 2px 7px; border-radius: 5px; }
+  .bloc-header { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; margin: 12px 0 4px; display: flex; align-items: center; gap: 6px; }
+  .bloc-header:first-child { margin-top: 0; }
+  .dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; flex: none; }
+  .cand-check { display: flex; align-items: center; gap: 7px; padding: 3px 0; font-size: 0.88rem; cursor: pointer; }
+  .cand-check input { margin: 0; }
+  .cand-grid { columns: 2; column-gap: 14px; }
+  .cand-grid .cand-check { break-inside: avoid; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.86rem; }
+  th { text-align: left; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.03em; color: var(--muted); font-weight: 600; padding: 6px 6px; border-bottom: 1px solid var(--border); }
+  td { padding: 6px 6px; border-bottom: 1px solid #f0f1f4; vertical-align: middle; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  tr.sep td { border-top: 1px solid var(--border); }
+  .ref { color: var(--muted); font-size: 0.78rem; }
+  .ref em { font-style: normal; color: #9aa1ad; }
+  .sumline { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 10px; flex-wrap: wrap; }
+  .pill { border-radius: 999px; padding: 3px 10px; font-size: 0.8rem; font-weight: 700; }
+  .pill.ok { background: #e7f6ee; color: var(--ok); }
+  .pill.warn { background: #fdf3e6; color: var(--warn); }
+  .field { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 6px 0; font-size: 0.88rem; }
+  .field label { flex: 1; }
+  .sub { border-left: 3px solid var(--border); padding-left: 12px; margin: 6px 0 4px; }
+  .switch { display: flex; align-items: center; gap: 8px; font-size: 0.88rem; font-weight: 600; cursor: pointer; margin-top: 6px; }
+  .bar-cell { width: 34%; }
+  .bar { height: 10px; border-radius: 5px; background: #e9ecf2; overflow: hidden; }
+  .bar > span { display: block; height: 100%; border-radius: 5px; }
+  tr.qualified td { font-weight: 700; }
+  .qual-tag { font-size: 0.68rem; font-weight: 700; color: #fff; border-radius: 4px; padding: 1px 6px; margin-left: 6px; vertical-align: 1px; }
+  .finalists { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-top: 12px; font-size: 0.88rem; }
+  .finalists select { width: auto; }
+  .kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-bottom: 12px; }
+  @media (max-width: 700px) { .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } .cand-grid { columns: 1; } }
+  .kpi { background: #f7f8fb; border-radius: 8px; padding: 8px 10px; }
+  .kpi .k { font-size: 0.7rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.03em; }
+  .kpi .v { font-size: 1.05rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .duel { display: flex; height: 46px; border-radius: 10px; overflow: hidden; margin: 6px 0 8px; font-weight: 700; color: #fff; font-size: 1rem; }
+  .duel > div { display: flex; align-items: center; padding: 0 14px; white-space: nowrap; min-width: 0; transition: flex-basis .15s; }
+  .duel .a { background: var(--a); justify-content: flex-start; }
+  .duel .b { background: var(--b); justify-content: flex-end; }
+  .duel-names { display: flex; justify-content: space-between; font-size: 0.85rem; font-weight: 600; }
+  .rep-table input[type="number"] { width: 62px; }
+  .rep-table td.rest { color: var(--muted); }
+  .rep-table td.bad { color: #b91c1c; font-weight: 700; }
+  .rowbtns { white-space: nowrap; }
+  .scroll { overflow-x: auto; }
+  .note { background: #f7f8fb; border-radius: 8px; padding: 10px 12px; font-size: 0.8rem; color: var(--muted); line-height: 1.45; }
+  footer { text-align: center; color: var(--muted); font-size: 0.78rem; margin: 24px 0 8px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Simulateur de reports de voix — présidentielle 2027</h1>
+  <p class="subtitle">Construisez un premier tour (scores, participation, nouveaux inscrits), puis répartissez les voix entre les deux qualifiés pour obtenir un second tour. Cet outil est indépendant de l'agrégation des sondages.</p>
+  <a class="backlink" href="./index.html">← Retour au simulateur de moyennes</a>
+
+  <!-- ============ 1. PREMIER TOUR ============ -->
+  <div class="step-title"><span class="num">1</span><h2>Premier tour</h2><p>Les scores sont en % des suffrages exprimés.</p></div>
+  <div class="grid">
+    <div>
+      <div class="card">
+        <h3>Point de départ</h3>
+        <select id="pollSelect"></select>
+        <p class="hint" id="pollHint" style="margin:6px 0 0;">Choisissez un sondage récent pour pré-remplir les candidats et leurs scores, ou partez de zéro. Vous pouvez ensuite tout modifier.</p>
+      </div>
+      <div class="card">
+        <h3>Candidats</h3>
+        <div id="candList"></div>
+      </div>
+      <div class="card">
+        <h3>Participation</h3>
+        <div class="field"><label>Inscrits en 2022</label><strong id="inscrits2022"></strong></div>
+        <div class="field"><label for="abst">Abstention <span class="hint">(% des inscrits)</span></label><input type="number" id="abst" min="0" max="100" step="0.1"></div>
+        <div class="field"><label for="blancs">Votes blancs <span class="hint">(% des votants)</span></label><input type="number" id="blancs" min="0" max="100" step="0.1"></div>
+        <div class="field"><label for="nuls">Votes nuls <span class="hint">(% des votants)</span></label><input type="number" id="nuls" min="0" max="100" step="0.1"></div>
+        <p class="hint" style="margin:2px 0 8px;">Valeurs par défaut : 1<sup>er</sup> tour 2022 (abstention 26,31 %, blancs 1,51 %, nuls 0,69 % des votants).</p>
+
+        <label class="switch"><input type="checkbox" id="newOn"> Ajouter les inscrits supplémentaires depuis 2022</label>
+        <div id="newBox" class="sub" style="display:none;">
+          <div class="field"><label for="newCount">Inscrits supplémentaires</label><input type="number" class="wide" id="newCount" min="0" step="1000"></div>
+          <p class="hint" style="margin:0 0 6px;">Par défaut : 49 813 412 électeurs inscrits au 11 février 2026 (Insee), contre 48 747 876 au 1<sup>er</sup> tour 2022, soit environ 1 065 500 de plus.</p>
+          <div class="field"><label for="newAbst">Abstention de ces inscrits <span class="hint">(%)</span></label><input type="number" id="newAbst" min="0" max="100" step="0.1"></div>
+          <div class="field"><label for="newBlancs">Blancs et nuls de ces inscrits <span class="hint">(% des votants)</span></label><input type="number" id="newBlancs" min="0" max="100" step="0.1"></div>
+          <label class="switch" style="font-weight:400;"><input type="checkbox" id="newSpecific"> Répartir leurs voix autrement que le reste de l'électorat</label>
+          <p class="hint" id="newSameHint" style="margin:4px 0 0;">Sinon, ils votent comme les autres électeurs (mêmes scores).</p>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="card">
+        <h3>Scores du premier tour</h3>
+        <div class="scroll"><table id="scoreTable"></table></div>
+        <div class="sumline">
+          <span id="sumPill" class="pill ok"></span>
+          <span style="display:flex; gap:6px; flex-wrap:wrap;">
+            <button type="button" id="normalizeBtn">Ramener le total à 100 %</button>
+            <button type="button" id="clearScoresBtn">Remettre à zéro</button>
+          </span>
+        </div>
+        <p class="hint" style="margin:10px 0 0;">Colonne 2022 : score du candidat au 1<sup>er</sup> tour 2022, ou, entre crochets, celui de sa famille politique s'il ne s'était pas présenté. Si le total ne fait pas 100 %, les scores sont ramenés proportionnellement à 100 % pour le calcul.</p>
+      </div>
+
+      <div class="card">
+        <h3>Résultat du premier tour</h3>
+        <div class="kpis" id="r1Kpis"></div>
+        <div class="scroll"><table id="r1Table"></table></div>
+        <div class="finalists">Qualifiés pour le second tour :
+          <select id="finA"></select> <span>et</span> <select id="finB"></select>
+          <span class="hint" id="finHint"></span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ 2. SECOND TOUR ============ -->
+  <div class="step-title"><span class="num">2</span><h2>Second tour</h2><p>Pour chaque électorat du 1<sup>er</sup> tour, indiquez où vont ses voix.</p></div>
+  <div class="grid">
+    <div>
+      <div class="card">
+        <h3>Mode d'emploi</h3>
+        <p class="hint" style="margin:0 0 8px;">Chaque ligne correspond aux électeurs d'un candidat (ou aux blancs/nuls, ou aux abstentionnistes) du 1<sup>er</sup> tour. Indiquez la part qui vote pour chaque qualifié et la part qui vote blanc ou nul ; le reste s'abstient.</p>
+        <p class="hint" style="margin:0 0 8px;">Boutons rapides : <strong>½</strong> partage à égalité entre les deux qualifiés la part qui vote pour l'un d'eux ; <strong>0</strong> remet la ligne à zéro (tout en abstention).</p>
+        <button type="button" id="resetReportsBtn">Réinitialiser les reports</button>
+      </div>
+      <div class="card">
+        <h3>Référence 2022</h3>
+        <p class="hint" style="margin:0;">Second tour 2022 : Emmanuel Macron 58,55 %, Marine Le Pen 41,45 % des exprimés ; abstention 28,01 % ; blancs 6,35 % et nuls 2,29 % des votants.</p>
+      </div>
+    </div>
+    <div>
+      <div class="card">
+        <h3>Reports de voix</h3>
+        <div class="scroll"><table class="rep-table" id="repTable"></table></div>
+      </div>
+      <div class="card">
+        <h3>Résultat du second tour</h3>
+        <div class="duel-names"><span id="duelNameA"></span><span id="duelNameB"></span></div>
+        <div class="duel"><div class="a" id="duelA"></div><div class="b" id="duelB"></div></div>
+        <div class="kpis" id="r2Kpis"></div>
+        <div class="scroll"><table id="r2Table"></table></div>
+      </div>
+      <div class="note">Sources : résultats officiels de l'élection présidentielle 2022 (ministère de l'Intérieur) ; inscrits au 11 février 2026 (Insee). Les scores de sondages viennent des données du simulateur de moyennes. Tout le calcul se fait dans votre navigateur.</div>
+    </div>
+  </div>
+  <footer>Tout le calcul se fait dans votre navigateur — aucune donnée n'est envoyée sur un serveur.</footer>
+</div>
+
+<script>
+// ---------------------------------------------------------------------------
+// Références 2022 (1er tour, ministère de l'Intérieur) et familles politiques
+// ---------------------------------------------------------------------------
+const INSCRITS_2022 = 48747876;
+const DEFAULT_PARTICIPATION = { abst: 26.31, blancs: 1.51, nuls: 0.69 };
+const NEW_INSCRITS_DEFAULT = 49813412 - INSCRITS_2022; // Insee, 11 févr. 2026
+const R1_2022 = { // % des exprimés
+  "Macron": 27.85, "Le Pen": 23.15, "Mélenchon": 21.95, "Zemmour": 7.07, "Pécresse": 4.78, "Jadot": 4.63,
+  "Lassalle": 3.13, "Roussel": 2.28, "Dupont-Aignan": 2.06, "Hidalgo": 1.75, "Poutou": 0.77, "Arthaud": 0.56,
+};
+// Candidat 2027 -> candidat 2022 de sa famille politique (si lui-même ne s'est pas présenté)
+const OWN_2022 = { "Le Pen": "Le Pen", "Mélenchon": "Mélenchon", "Zemmour": "Zemmour", "Roussel": "Roussel",
+  "Dupont-Aignan": "Dupont-Aignan", "Arthaud": "Arthaud", "Lasalle": "Lassalle" };
+const FAMILY_2022 = {
+  "Attal": ["Ensemble", "Macron"], "Philippe": ["Ensemble", "Macron"], "Le Maire": ["Ensemble", "Macron"],
+  "Retailleau": ["LR", "Pécresse"], "Bertrand": ["LR", "Pécresse"], "Lisnard": ["LR", "Pécresse"], "Lagarde": ["droite", "Pécresse"],
+  "Glucksmann": ["PS", "Hidalgo"], "Hollande": ["PS", "Hidalgo"], "Faure": ["PS", "Hidalgo"], "Royal": ["PS", "Hidalgo"],
+  "Bouamrane": ["PS", "Hidalgo"], "Guedj": ["PS", "Hidalgo"],
+  "Tondelier": ["Écologistes", "Jadot"], "Ruffin": ["LFI", "Mélenchon"],
+  "Bardella": ["RN", "Le Pen"], "Knafo": ["Reconquête", "Zemmour"],
+};
+const BLOC_ORDER = ["BLOC GAUCHE", "CENTRE", "BLOC DROITE", "DIVERS"];
+const BLOC_LABEL = { "BLOC GAUCHE": "Gauche", "CENTRE": "Centre", "BLOC DROITE": "Droite", "DIVERS": "Divers" };
+const BLOC_COLOR = { "BLOC GAUCHE": "var(--gauche)", "CENTRE": "var(--centre)", "BLOC DROITE": "var(--droite)", "DIVERS": "var(--divers)" };
+const MONTHS = ["janv.", "févr.", "mars", "avr.", "mai", "juin", "juil.", "août", "sept.", "oct.", "nov.", "déc."];
+const STORE_KEY = "reports2027-v1";
+
+let dataset = { candidates: [], polls: [] };
+let S; // état
+
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const fmtPct = (v, d = 1) => (isFinite(v) ? v : 0).toLocaleString("fr-FR", { minimumFractionDigits: d, maximumFractionDigits: d }) + " %";
+const fmtInt = v => Math.round(v).toLocaleString("fr-FR");
+const num = (v, def = 0) => { const n = parseFloat(String(v).replace(",", ".")); return isFinite(n) ? n : def; };
+const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+const parseDate = s => { const m = /^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/.exec(s || ""); if (!m) return null; const y = +m[3] < 100 ? 2000 + +m[3] : +m[3]; return { y, m: +m[1], d: +m[2], key: y * 10000 + +m[1] * 100 + +m[2] }; };
+const fmtDay = d => `${d.d === 1 ? "1er" : d.d} ${MONTHS[d.m - 1]}`;
+const candInfo = name => dataset.candidates.find(c => c.name === name) || { name, bloc: "DIVERS" };
+
+function ref2022(name) {
+  if (OWN_2022[name]) return { txt: fmtPct(R1_2022[OWN_2022[name]], 2), fam: false };
+  const f = FAMILY_2022[name];
+  if (f) return { txt: `[${f[0]} : ${fmtPct(R1_2022[f[1]], 2)}]`, title: `Pas candidat en 2022 — score de ${f[1]} (${f[0]})`, fam: true };
+  return { txt: "—", title: "Pas de candidat de cette famille en 2022", fam: true };
+}
+
+function defaultState() {
+  return {
+    pollKey: "", selected: [], scores: {},
+    abst: DEFAULT_PARTICIPATION.abst, blancs: DEFAULT_PARTICIPATION.blancs, nuls: DEFAULT_PARTICIPATION.nuls,
+    newOn: false, newCount: NEW_INSCRITS_DEFAULT, newAbst: DEFAULT_PARTICIPATION.abst, newBlancs: DEFAULT_PARTICIPATION.blancs + DEFAULT_PARTICIPATION.nuls,
+    newSpecific: false, newScores: {},
+    finA: "", finB: "", reports: {},
+  };
+}
+function save() { try { localStorage.setItem(STORE_KEY, JSON.stringify(S)); } catch (e) {} }
+function load() {
+  try { const s = JSON.parse(localStorage.getItem(STORE_KEY) || "null"); if (s && typeof s === "object") return Object.assign(defaultState(), s); } catch (e) {}
+  return null;
+}
+
+// ---------------------------------------------------------------------------
+// Point de départ : sondages récents (un seul, au choix)
+// ---------------------------------------------------------------------------
+function recentPolls() {
+  const withDate = dataset.polls.map((p, i) => ({ p, i, d: parseDate(p.date), s: parseDate(p.debut) })).filter(x => x.d);
+  if (!withDate.length) return [];
+  const maxKey = Math.max(...withDate.map(x => x.d.key));
+  const maxD = withDate.find(x => x.d.key === maxKey).d;
+  const limit = new Date(maxD.y, maxD.m - 1, maxD.d); limit.setDate(limit.getDate() - 60);
+  const limKey = limit.getFullYear() * 10000 + (limit.getMonth() + 1) * 100 + limit.getDate();
+  return withDate.filter(x => x.d.key >= limKey).sort((a, b) => b.d.key - a.d.key || a.i - b.i);
+}
+function pollLabel(x) {
+  const names = Object.entries(x.p.scores).filter(([, v]) => v !== null && v !== undefined).sort((a, b) => b[1] - a[1]).map(([n]) => n);
+  const hypNum = (/^(Hypothèse\s*\d+)/.exec(x.p.hypothese || "") || [])[1] || "";
+  const terrain = !x.s || x.s.key === x.d.key ? fmtDay(x.d)
+    : x.s.m === x.d.m ? `${x.s.d === 1 ? "1er" : x.s.d} – ${fmtDay(x.d)}` : `${fmtDay(x.s)} – ${fmtDay(x.d)}`;
+  return `${x.p.institut} · ${terrain} · ${hypNum ? hypNum + " · " : ""}${names.length} cand. (${names.slice(0, 4).join(", ")}…)`;
+}
+function renderPollSelect() {
+  const list = recentPolls();
+  $("pollSelect").innerHTML = `<option value="">Aucun — saisie libre</option>` + list.map(x =>
+    `<option value="${x.i}"${String(x.i) === String(S.pollKey) ? " selected" : ""}>${esc(pollLabel(x))}</option>`).join("");
+}
+function applyPoll(idx) {
+  S.pollKey = idx;
+  if (idx === "") { save(); renderAll(); return; }
+  const p = dataset.polls[+idx];
+  const entries = Object.entries(p.scores).filter(([, v]) => v !== null && v !== undefined);
+  S.selected = entries.map(([n]) => n);
+  S.scores = Object.fromEntries(entries.map(([n, v]) => [n, v]));
+  S.finA = ""; S.finB = "";
+  save(); renderAll();
+}
+
+// ---------------------------------------------------------------------------
+// Candidats
+// ---------------------------------------------------------------------------
+function renderCandList() {
+  const box = $("candList");
+  box.innerHTML = BLOC_ORDER.map(b => {
+    const cs = dataset.candidates.filter(c => c.bloc === b);
+    if (!cs.length) return "";
+    return `<div class="bloc-header"><span class="dot" style="background:${BLOC_COLOR[b]}"></span>${BLOC_LABEL[b]}</div>
+      <div class="cand-grid">${cs.map(c => `<label class="cand-check"><input type="checkbox" data-cand="${esc(c.name)}"${S.selected.includes(c.name) ? " checked" : ""}>${esc(c.name)}</label>`).join("")}</div>`;
+  }).join("");
+  box.querySelectorAll("input[data-cand]").forEach(inp => inp.addEventListener("change", () => {
+    const n = inp.getAttribute("data-cand");
+    if (inp.checked) { if (!S.selected.includes(n)) S.selected.push(n); }
+    else S.selected = S.selected.filter(x => x !== n);
+    save(); renderScores(); compute();
+  }));
+}
+function orderedSelected() {
+  return [...S.selected].sort((a, b) => {
+    const ba = BLOC_ORDER.indexOf(candInfo(a).bloc), bb = BLOC_ORDER.indexOf(candInfo(b).bloc);
+    return ba - bb || dataset.candidates.findIndex(c => c.name === a) - dataset.candidates.findIndex(c => c.name === b);
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Tableau des scores (et répartition spécifique des nouveaux inscrits)
+// ---------------------------------------------------------------------------
+function renderScores() {
+  const names = orderedSelected();
+  const spec = S.newOn && S.newSpecific;
+  $("scoreTable").innerHTML = `<thead><tr><th>Candidat</th><th class="num">2022</th><th class="num">Score</th>${spec ? '<th class="num">Nouveaux inscrits</th>' : ""}</tr></thead><tbody>` +
+    (names.length ? names.map(n => {
+      const r = ref2022(n), c = candInfo(n);
+      return `<tr><td><span class="dot" style="background:${BLOC_COLOR[c.bloc] || BLOC_COLOR.DIVERS}; margin-right:6px;"></span>${esc(n)}</td>
+        <td class="num ref"${r.title ? ` title="${esc(r.title)}"` : ""}>${r.fam ? `<em>${esc(r.txt)}</em>` : esc(r.txt)}</td>
+        <td class="num"><input type="number" min="0" max="100" step="0.5" data-score="${esc(n)}" value="${S.scores[n] ?? ""}" placeholder="0"></td>
+        ${spec ? `<td class="num"><input type="number" min="0" max="100" step="0.5" data-newscore="${esc(n)}" value="${S.newScores[n] ?? ""}" placeholder="0"></td>` : ""}</tr>`;
+    }).join("") : `<tr><td colspan="4" class="hint">Cochez des candidats à gauche, ou partez d'un sondage.</td></tr>`) + "</tbody>";
+  $("scoreTable").querySelectorAll("input[data-score]").forEach(inp => inp.addEventListener("input", () => {
+    S.scores[inp.getAttribute("data-score")] = inp.value === "" ? null : num(inp.value); save(); compute();
+  }));
+  $("scoreTable").querySelectorAll("input[data-newscore]").forEach(inp => inp.addEventListener("input", () => {
+    S.newScores[inp.getAttribute("data-newscore")] = inp.value === "" ? null : num(inp.value); save(); compute();
+  }));
+}
+
+// ---------------------------------------------------------------------------
+// Calcul du 1er tour
+// ---------------------------------------------------------------------------
+function shares(names, scores) {
+  const raw = names.map(n => Math.max(0, num(scores[n])));
+  const tot = raw.reduce((a, b) => a + b, 0);
+  return { tot, sh: Object.fromEntries(names.map((n, i) => [n, tot > 0 ? raw[i] / tot : 0])) };
+}
+function round1() {
+  const names = orderedSelected();
+  const base = shares(names, S.scores);
+  const abst = clamp(num(S.abst), 0, 100) / 100, bl = clamp(num(S.blancs), 0, 100) / 100, nu = clamp(num(S.nuls), 0, 100) / 100;
+  let inscrits = INSCRITS_2022, votants = INSCRITS_2022 * (1 - abst);
+  let blancs = votants * bl, nuls = votants * nu;
+  let expr = Math.max(0, votants - blancs - nuls);
+  const voix = Object.fromEntries(names.map(n => [n, expr * base.sh[n]]));
+  let newSh = null;
+  if (S.newOn) {
+    const N = Math.max(0, num(S.newCount));
+    const nv = N * (1 - clamp(num(S.newAbst), 0, 100) / 100);
+    const nbn = nv * clamp(num(S.newBlancs), 0, 100) / 100;
+    const ne = Math.max(0, nv - nbn);
+    // blancs et nuls des nouveaux inscrits : répartis entre blancs et nuls au prorata du reste de l'électorat
+    const ratioB = bl + nu > 0 ? bl / (bl + nu) : 0.5;
+    inscrits += N; votants += nv; blancs += nbn * ratioB; nuls += nbn * (1 - ratioB); expr += ne;
+    newSh = S.newSpecific ? shares(names, S.newScores) : base;
+    names.forEach(n => { voix[n] += ne * newSh.sh[n]; });
+  }
+  const ranked = [...names].sort((a, b) => voix[b] - voix[a]);
+  return { names, ranked, voix, inscrits, votants, blancs, nuls, expr, abstVoix: inscrits - votants, baseTot: base.tot, newTot: newSh ? newSh.tot : null };
+}
+
+function renderRound1(r) {
+  const pill = $("sumPill");
+  const t = r.baseTot, ok = Math.abs(t - 100) < 0.05;
+  pill.className = "pill " + (ok ? "ok" : "warn");
+  pill.textContent = r.names.length ? `Total : ${fmtPct(t, 1)}${ok ? " ✓" : " — ramené à 100 % pour le calcul"}` : "Total : —";
+  if (S.newOn && S.newSpecific && r.newTot !== null && Math.abs(r.newTot - 100) >= 0.05 && r.names.length) pill.textContent += ` · nouveaux inscrits : ${fmtPct(r.newTot, 1)}`;
+
+  $("r1Kpis").innerHTML = [
+    ["Inscrits", fmtInt(r.inscrits)], ["Participation", fmtPct(r.inscrits ? 100 * r.votants / r.inscrits : 0)],
+    ["Abstention", fmtPct(r.inscrits ? 100 * r.abstVoix / r.inscrits : 0)], ["Exprimés", fmtInt(r.expr)],
+  ].map(([k, v]) => `<div class="kpi"><div class="k">${k}</div><div class="v">${v}</div></div>`).join("");
+
+  const [A, B] = finalists(r);
+  const maxPct = Math.max(1, ...r.ranked.map(n => r.expr ? 100 * r.voix[n] / r.expr : 0));
+  $("r1Table").innerHTML = `<thead><tr><th>Candidat</th><th class="num">Voix</th><th class="num">% exprimés</th><th class="num">% inscrits</th><th class="bar-cell"></th></tr></thead><tbody>` +
+    r.ranked.map(n => {
+      const pe = r.expr ? 100 * r.voix[n] / r.expr : 0, pi = r.inscrits ? 100 * r.voix[n] / r.inscrits : 0;
+      const q = n === A ? "a" : n === B ? "b" : "";
+      return `<tr class="${q ? "qualified" : ""}"><td>${esc(n)}${q ? `<span class="qual-tag" style="background:var(--${q})">qualifié</span>` : ""}</td>
+        <td class="num">${fmtInt(r.voix[n])}</td><td class="num">${fmtPct(pe, 2)}</td><td class="num">${fmtPct(pi, 2)}</td>
+        <td class="bar-cell"><div class="bar"><span style="width:${(100 * pe / maxPct).toFixed(1)}%; background:${q ? `var(--${q})` : BLOC_COLOR[candInfo(n).bloc] || BLOC_COLOR.DIVERS}"></span></div></td></tr>`;
+    }).join("") +
+    `<tr class="sep"><td>Votes blancs</td><td class="num">${fmtInt(r.blancs)}</td><td class="num ref">${fmtPct(r.votants ? 100 * r.blancs / r.votants : 0, 2)} des votants</td><td class="num">${fmtPct(r.inscrits ? 100 * r.blancs / r.inscrits : 0, 2)}</td><td></td></tr>
+     <tr><td>Votes nuls</td><td class="num">${fmtInt(r.nuls)}</td><td class="num ref">${fmtPct(r.votants ? 100 * r.nuls / r.votants : 0, 2)} des votants</td><td class="num">${fmtPct(r.inscrits ? 100 * r.nuls / r.inscrits : 0, 2)}</td><td></td></tr>
+     <tr><td>Abstention</td><td class="num">${fmtInt(r.abstVoix)}</td><td class="num ref">—</td><td class="num">${fmtPct(r.inscrits ? 100 * r.abstVoix / r.inscrits : 0, 2)}</td><td></td></tr></tbody>`;
+
+  // sélecteurs des qualifiés
+  const opts = sel => `<option value="">—</option>` + r.ranked.map(n => `<option${n === sel ? " selected" : ""}>${esc(n)}</option>`).join("");
+  $("finA").innerHTML = opts(A); $("finB").innerHTML = opts(B);
+  const auto = !S.finA && !S.finB;
+  $("finHint").textContent = r.ranked.length < 2 ? "Il faut au moins deux candidats." : auto ? "(les deux premiers, automatiquement)" : "(choisis manuellement)";
+}
+function finalists(r) {
+  let A = S.finA && r.names.includes(S.finA) ? S.finA : "";
+  let B = S.finB && r.names.includes(S.finB) ? S.finB : "";
+  if (!A && !B) { A = r.ranked[0] || ""; B = r.ranked[1] || ""; }
+  else if (!A) A = r.ranked.find(n => n !== B) || "";
+  else if (!B) B = r.ranked.find(n => n !== A) || "";
+  if (A === B) B = r.ranked.find(n => n !== A) || "";
+  return [A, B];
+}
+
+// ---------------------------------------------------------------------------
+// Second tour
+// ---------------------------------------------------------------------------
+function repDefault(key, A, B) {
+  if (key === "c:" + A) return { a: 100, b: 0, bn: 0 };
+  if (key === "c:" + B) return { a: 0, b: 100, bn: 0 };
+  if (key === "blancs") return { a: 0, b: 0, bn: 100 };
+  return { a: 0, b: 0, bn: 0 };
+}
+function repOf(key, A, B) {
+  const pairKey = A + "|" + B;
+  const all = S.reports[pairKey] || (S.reports[pairKey] = {});
+  return all[key] || repDefault(key, A, B);
+}
+function setRep(key, A, B, v) { const pk = A + "|" + B; (S.reports[pk] || (S.reports[pk] = {}))[key] = v; save(); }
+
+function round2(r) {
+  const [A, B] = finalists(r);
+  if (!A || !B) return null;
+  const rows = [];
+  [A, B, ...r.ranked.filter(n => n !== A && n !== B)].forEach(n => rows.push({ key: "c:" + n, label: n, voix: r.voix[n], cand: n }));
+  rows.push({ key: "blancs", label: "Blancs et nuls du 1er tour", voix: r.blancs + r.nuls });
+  rows.push({ key: "abst", label: "Abstentionnistes du 1er tour", voix: r.abstVoix });
+  let va = 0, vb = 0, vbn = 0;
+  rows.forEach(row => {
+    const rp = repOf(row.key, A, B);
+    row.rp = rp;
+    const sum = rp.a + rp.b + rp.bn;
+    const k = sum > 100 ? 100 / sum : 1; // si > 100 %, on ramène à 100 % pour le calcul
+    va += row.voix * rp.a / 100 * k; vb += row.voix * rp.b / 100 * k; vbn += row.voix * rp.bn / 100 * k;
+    row.over = sum > 100.0001;
+  });
+  const votants = va + vb + vbn, expr = va + vb;
+  return { A, B, rows, va, vb, vbn, votants, expr, inscrits: r.inscrits, abst: r.inscrits - votants };
+}
+
+function renderRound2(r) {
+  const t = round2(r);
+  if (!t) {
+    $("repTable").innerHTML = `<tbody><tr><td class="hint">Il faut au moins deux candidats avec un score au premier tour.</td></tr></tbody>`;
+    $("duelA").style.flexBasis = "50%"; $("duelB").style.flexBasis = "50%"; $("duelA").textContent = ""; $("duelB").textContent = "";
+    $("duelNameA").textContent = ""; $("duelNameB").textContent = ""; $("r2Kpis").innerHTML = ""; $("r2Table").innerHTML = "";
+    return;
+  }
+  const { A, B } = t;
+  $("repTable").innerHTML = `<thead><tr><th>Électorat du 1<sup>er</sup> tour</th><th class="num">Voix</th>
+      <th class="num" style="color:var(--a)">→ ${esc(A)}</th><th class="num" style="color:var(--b)">→ ${esc(B)}</th>
+      <th class="num">→ Blanc / nul</th><th class="num">→ Abstention</th><th></th></tr></thead><tbody>` +
+    t.rows.map((row, i) => {
+      const rest = 100 - row.rp.a - row.rp.b - row.rp.bn;
+      return `<tr class="${i === 2 || row.key === "blancs" ? "sep" : ""}"><td>${esc(row.label)}${row.cand === A || row.cand === B ? ' <span class="hint">(qualifié)</span>' : ""}</td>
+        <td class="num">${fmtInt(row.voix)}</td>
+        <td class="num"><input type="number" min="0" max="100" step="1" data-rk="${esc(row.key)}" data-f="a" value="${row.rp.a}"></td>
+        <td class="num"><input type="number" min="0" max="100" step="1" data-rk="${esc(row.key)}" data-f="b" value="${row.rp.b}"></td>
+        <td class="num"><input type="number" min="0" max="100" step="1" data-rk="${esc(row.key)}" data-f="bn" value="${row.rp.bn}"></td>
+        <td class="num ${rest < -0.0001 ? "bad" : "rest"}" data-rest="${esc(row.key)}">${rest < -0.0001 ? "total > 100 %" : fmtPct(rest, 0)}</td>
+        <td class="rowbtns"><button type="button" class="mini" data-half="${esc(row.key)}" title="Partager à égalité entre ${esc(A)} et ${esc(B)}">½</button>
+          <button type="button" class="mini" data-zero="${esc(row.key)}" title="Remettre à zéro">0</button></td></tr>`;
+    }).join("") + "</tbody>";
+
+  $("repTable").querySelectorAll("input[data-rk]").forEach(inp => inp.addEventListener("input", () => {
+    const key = inp.getAttribute("data-rk"), f = inp.getAttribute("data-f");
+    const cur = Object.assign({}, repOf(key, A, B)); cur[f] = clamp(num(inp.value), 0, 100);
+    setRep(key, A, B, cur);
+    const rest = 100 - cur.a - cur.b - cur.bn, cell = $("repTable").querySelector(`[data-rest="${CSS.escape(key)}"]`);
+    cell.className = "num " + (rest < -0.0001 ? "bad" : "rest"); cell.textContent = rest < -0.0001 ? "total > 100 %" : fmtPct(rest, 0);
+    renderRound2Result(round2(round1()));
+  }));
+  $("repTable").querySelectorAll("[data-half]").forEach(btn => btn.addEventListener("click", () => {
+    const key = btn.getAttribute("data-half"), cur = repOf(key, A, B);
+    // partage à égalité la part qui vote pour un qualifié (ou tout ce qui ne vote pas blanc si la ligne est vide)
+    const share = (cur.a + cur.b) > 0 ? (cur.a + cur.b) / 2 : (100 - cur.bn) / 2;
+    setRep(key, A, B, { a: Math.round(share * 10) / 10, b: Math.round(share * 10) / 10, bn: cur.bn });
+    renderRound2(round1());
+  }));
+  $("repTable").querySelectorAll("[data-zero]").forEach(btn => btn.addEventListener("click", () => {
+    setRep(btn.getAttribute("data-zero"), A, B, { a: 0, b: 0, bn: 0 }); renderRound2(round1());
+  }));
+  renderRound2Result(t);
+}
+
+function renderRound2Result(t) {
+  if (!t) return;
+  const pa = t.expr ? 100 * t.va / t.expr : 0, pb = t.expr ? 100 * t.vb / t.expr : 0;
+  $("duelNameA").textContent = t.A; $("duelNameB").textContent = t.B;
+  const fa = t.expr ? pa : 50, fb = t.expr ? pb : 50;
+  $("duelA").style.flexBasis = fa + "%"; $("duelB").style.flexBasis = fb + "%";
+  $("duelA").textContent = t.expr ? fmtPct(pa, 1) : "—"; $("duelB").textContent = t.expr ? fmtPct(pb, 1) : "—";
+  $("r2Kpis").innerHTML = [
+    ["Participation", fmtPct(t.inscrits ? 100 * t.votants / t.inscrits : 0)], ["Abstention", fmtPct(t.inscrits ? 100 * t.abst / t.inscrits : 0)],
+    ["Blancs et nuls", fmtPct(t.votants ? 100 * t.vbn / t.votants : 0) + " des votants"], ["Écart", t.expr ? fmtInt(Math.abs(t.va - t.vb)) + " voix" : "—"],
+  ].map(([k, v]) => `<div class="kpi"><div class="k">${k}</div><div class="v">${v}</div></div>`).join("");
+  $("r2Table").innerHTML = `<thead><tr><th></th><th class="num">Voix</th><th class="num">% exprimés</th><th class="num">% inscrits</th></tr></thead><tbody>
+    <tr><td><strong style="color:var(--a)">${esc(t.A)}</strong></td><td class="num">${fmtInt(t.va)}</td><td class="num">${fmtPct(pa, 2)}</td><td class="num">${fmtPct(t.inscrits ? 100 * t.va / t.inscrits : 0, 2)}</td></tr>
+    <tr><td><strong style="color:var(--b)">${esc(t.B)}</strong></td><td class="num">${fmtInt(t.vb)}</td><td class="num">${fmtPct(pb, 2)}</td><td class="num">${fmtPct(t.inscrits ? 100 * t.vb / t.inscrits : 0, 2)}</td></tr>
+    <tr class="sep"><td>Blancs et nuls</td><td class="num">${fmtInt(t.vbn)}</td><td class="num ref">${fmtPct(t.votants ? 100 * t.vbn / t.votants : 0, 2)} des votants</td><td class="num">${fmtPct(t.inscrits ? 100 * t.vbn / t.inscrits : 0, 2)}</td></tr>
+    <tr><td>Abstention</td><td class="num">${fmtInt(t.abst)}</td><td class="num ref">—</td><td class="num">${fmtPct(t.inscrits ? 100 * t.abst / t.inscrits : 0, 2)}</td></tr></tbody>`;
+}
+
+// ---------------------------------------------------------------------------
+function compute() { const r = round1(); renderRound1(r); renderRound2(r); }
+function renderParticipation() {
+  $("inscrits2022").textContent = fmtInt(INSCRITS_2022);
+  ["abst", "blancs", "nuls", "newCount", "newAbst", "newBlancs"].forEach(k => { $(k).value = S[k]; });
+  $("newOn").checked = S.newOn; $("newSpecific").checked = S.newSpecific;
+  $("newBox").style.display = S.newOn ? "" : "none";
+  $("newSameHint").style.display = S.newSpecific ? "none" : "";
+}
+function renderAll() { renderPollSelect(); renderCandList(); renderParticipation(); renderScores(); compute(); }
+
+function bind() {
+  $("pollSelect").addEventListener("change", e => applyPoll(e.target.value));
+  ["abst", "blancs", "nuls", "newCount", "newAbst", "newBlancs"].forEach(k => $(k).addEventListener("input", e => { S[k] = num(e.target.value); save(); compute(); }));
+  $("newOn").addEventListener("change", e => { S.newOn = e.target.checked; save(); renderParticipation(); renderScores(); compute(); });
+  $("newSpecific").addEventListener("change", e => {
+    S.newSpecific = e.target.checked;
+    if (S.newSpecific) orderedSelected().forEach(n => { if (S.newScores[n] === undefined || S.newScores[n] === null) S.newScores[n] = S.scores[n] ?? null; });
+    save(); renderParticipation(); renderScores(); compute();
+  });
+  $("normalizeBtn").addEventListener("click", () => {
+    const names = orderedSelected(), { tot, sh } = shares(names, S.scores);
+    if (tot > 0) names.forEach(n => { S.scores[n] = Math.round(sh[n] * 1000) / 10; });
+    if (S.newOn && S.newSpecific) { const x = shares(names, S.newScores); if (x.tot > 0) names.forEach(n => { S.newScores[n] = Math.round(x.sh[n] * 1000) / 10; }); }
+    save(); renderScores(); compute();
+  });
+  $("clearScoresBtn").addEventListener("click", () => { S.scores = {}; S.newScores = {}; save(); renderScores(); compute(); });
+  $("finA").addEventListener("change", e => { S.finA = e.target.value; if (S.finA && S.finA === S.finB) S.finB = ""; save(); compute(); });
+  $("finB").addEventListener("change", e => { S.finB = e.target.value; if (S.finB && S.finB === S.finA) S.finA = ""; save(); compute(); });
+  $("resetReportsBtn").addEventListener("click", () => { S.reports = {}; save(); compute(); });
+}
+
+fetch("./data.json", { cache: "no-cache" }).then(r => r.json()).then(d => {
+  dataset = d;
+  S = load() || defaultState();
+  S.selected = S.selected.filter(n => dataset.candidates.some(c => c.name === n));
+  if (!S.selected.length && !S.pollKey) {
+    // premier lancement : on part du sondage le plus récent
+    const first = recentPolls()[0];
+    if (first) { S.pollKey = String(first.i); const e = Object.entries(first.p.scores).filter(([, v]) => v !== null && v !== undefined); S.selected = e.map(([n]) => n); S.scores = Object.fromEntries(e); }
+  }
+  bind(); renderAll();
+}).catch(err => {
+  document.querySelector(".wrap").insertAdjacentHTML("beforeend", `<div class="card" style="color:#b91c1c">Impossible de charger les données (${esc(err.message)}).</div>`);
+});
+</script>
+</body></html>

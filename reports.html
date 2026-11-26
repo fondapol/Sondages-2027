@@ -117,7 +117,7 @@
         <label class="switch"><input type="checkbox" id="newOn"> Ajouter les inscrits supplémentaires depuis 2022</label>
         <div id="newBox" class="sub" style="display:none;">
           <div class="field"><label for="newCount">Inscrits supplémentaires</label><input type="number" class="wide" id="newCount" min="0" step="1000"></div>
-          <p class="hint" style="margin:0 0 6px;">Par défaut : 1,38 million d'électeurs en plus depuis 2022 (Insee : 50 187 093 inscrits au 11 février 2026, contre 48 803 175 à la présidentielle 2022).</p>
+          <p class="hint" style="margin:0 0 6px;">Par défaut : électeurs français uniquement, soit 49 813 412 inscrits au 11 février 2026 (Insee, listes communales et consulaires, hors Nouvelle-Calédonie) contre 48 747 876 au 1<sup>er</sup> tour 2022, soit environ 1,07 million de plus. Les électeurs européens, qui ne votent pas à la présidentielle, ne sont pas comptés.</p>
           <div class="field"><label for="newAbst">Abstention de ces inscrits <span class="hint">(%)</span></label><input type="number" id="newAbst" min="0" max="100" step="0.1"></div>
           <div class="field"><label for="newBlancs">Blancs et nuls de ces inscrits <span class="hint">(% des votants)</span></label><input type="number" id="newBlancs" min="0" max="100" step="0.1"></div>
           <label class="switch" style="font-weight:400;"><input type="checkbox" id="newSpecific"> Répartir leurs voix autrement que le reste de l'électorat</label>
@@ -191,7 +191,7 @@
 // ---------------------------------------------------------------------------
 const INSCRITS_2022 = 48747876;
 const DEFAULT_PARTICIPATION = { abst: 26.31, blancs: 1.51, nuls: 0.69 };
-const NEW_INSCRITS_DEFAULT = 1383918; // Insee : 50 187 093 inscrits en 2026 contre 48 803 175 à la présidentielle 2022
+const NEW_INSCRITS_DEFAULT = 49813412 - INSCRITS_2022; // électeurs français : Insee 11 févr. 2026 (hors Nouvelle-Calédonie) − inscrits du 1er tour 2022
 const R1_2022 = { // % des exprimés
   "Macron": 27.85, "Le Pen": 23.15, "Mélenchon": 21.95, "Zemmour": 7.07, "Pécresse": 4.78, "Jadot": 4.63,
   "Lassalle": 3.13, "Roussel": 2.28, "Dupont-Aignan": 2.06, "Hidalgo": 1.75, "Poutou": 0.77, "Arthaud": 0.56,

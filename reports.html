@@ -25,6 +25,8 @@
   .step-title p { margin: 0; color: var(--muted); font-size: 0.85rem; }
   .grid { display: grid; grid-template-columns: 330px 1fr; gap: 16px; align-items: start; }
   .grid > div { min-width: 0; }
+  .duo { display: grid; grid-template-columns: 2fr 1fr; gap: 16px; }
+  @media (max-width: 900px) { .duo { grid-template-columns: 1fr; } }
   @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } body { padding: 14px; } }
   .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 16px 18px; margin-bottom: 16px;
     box-shadow: 0 1px 3px rgba(0,0,0,0.04); }
@@ -84,6 +86,33 @@
   .rowbtns { white-space: nowrap; }
   .scroll { overflow-x: auto; }
   .note { background: #f7f8fb; border-radius: 8px; padding: 10px 12px; font-size: 0.8rem; color: var(--muted); line-height: 1.45; }
+  .ref22 { display: inline-block; background: #eef2fb; color: #1c3f99; font-weight: 700; border-radius: 5px; padding: 1px 7px; font-size: 0.8rem; white-space: nowrap; }
+  .ref22.fam { background: #f3f4f7; color: #4b5563; font-weight: 600; }
+  .rep-table .pill { font-size: 0.74rem; padding: 2px 8px; }
+  .toolbar { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 18px; }
+  .toolbar .backlink { margin: 0; }
+  #printView { display: none; }
+  @media print {
+    @page { size: A4 portrait; margin: 10mm; }
+    body { background: #fff; padding: 0; font-size: 9pt; }
+    .wrap { display: none !important; }
+    #printView { display: block; color: #111; }
+    #printView h1 { font-size: 15pt; margin: 0 0 2px; }
+    #printView .pv-sub { color: #555; font-size: 8.5pt; margin: 0 0 8px; }
+    #printView .pv-choices { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 18px; font-size: 8.5pt; border: 1px solid #ccc; border-radius: 6px; padding: 6px 9px; margin-bottom: 8px; }
+    #printView .pv-choices b { font-weight: 700; }
+    #printView table { font-size: 8pt; border-collapse: collapse; width: 100%; }
+    #printView th { font-size: 7pt; padding: 3px 4px; color: #444; border-bottom: 1px solid #999; }
+    #printView td { padding: 2.5px 4px; border-bottom: 1px solid #e3e3e3; }
+    #printView tr.q td { font-weight: 700; }
+    #printView tr.sep td { border-top: 1px solid #999; }
+    #printView .pv-h2 { font-size: 10pt; font-weight: 700; margin: 8px 0 3px; text-transform: uppercase; letter-spacing: .03em; }
+    #printView .pv-concl { border: 2px solid #111; border-radius: 8px; padding: 8px 12px; margin-top: 10px; }
+    #printView .pv-duel { display: flex; height: 26px; border-radius: 6px; overflow: hidden; color: #fff; font-weight: 700; font-size: 11pt; margin: 5px 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    #printView .pv-duel div { display: flex; align-items: center; padding: 0 8px; white-space: nowrap; }
+    #printView .pv-big { font-size: 13pt; font-weight: 700; }
+    #printView .pv-foot { color: #666; font-size: 7pt; margin-top: 8px; }
+  }
   footer { text-align: center; color: var(--muted); font-size: 0.78rem; margin: 24px 0 8px; }
 </style>
 </head>
@@ -91,7 +120,10 @@
 <div class="wrap">
   <h1>Simulateur de reports de voix — présidentielle 2027</h1>
   <p class="subtitle">Construisez un premier tour (scores, participation, nouveaux inscrits), puis répartissez les voix entre les deux qualifiés pour obtenir un second tour. Cet outil est indépendant de l'agrégation des sondages.</p>
-  <a class="backlink" href="./index.html">← Retour au simulateur de moyennes</a>
+  <div class="toolbar">
+    <a class="backlink" href="./index.html">← Retour au simulateur de moyennes</a>
+    <button type="button" class="primary" id="printBtn">Imprimer la simulation / PDF</button>
+  </div>
 
   <!-- ============ 1. PREMIER TOUR ============ -->
   <div class="step-title"><span class="num">1</span><h2>Premier tour</h2><p>Les scores sont en % des suffrages exprimés.</p></div>
@@ -107,21 +139,16 @@
         <div id="candList"></div>
       </div>
       <div class="card">
-        <h3>Participation</h3>
+        <h3>Électorat</h3>
         <div class="field"><label>Inscrits en 2022</label><strong id="inscrits2022"></strong></div>
-        <div class="field"><label for="abst">Abstention <span class="hint">(% des inscrits)</span></label><input type="number" id="abst" min="0" max="100" step="0.1"></div>
-        <div class="field"><label for="blancs">Votes blancs <span class="hint">(% des votants)</span></label><input type="number" id="blancs" min="0" max="100" step="0.1"></div>
-        <div class="field"><label for="nuls">Votes nuls <span class="hint">(% des votants)</span></label><input type="number" id="nuls" min="0" max="100" step="0.1"></div>
-        <p class="hint" style="margin:2px 0 8px;">Valeurs par défaut : 1<sup>er</sup> tour 2022 (abstention 26,31 %, blancs 1,51 %, nuls 0,69 % des votants).</p>
+        <p class="hint" style="margin:2px 0 8px;">L'abstention et les votes blancs et nuls se règlent en bas du tableau des scores (par défaut : 1<sup>er</sup> tour 2022, abstention 26,31 %, blancs 1,51 % et nuls 0,69 % des votants).</p>
 
         <label class="switch"><input type="checkbox" id="newOn"> Ajouter les inscrits supplémentaires depuis 2022</label>
         <div id="newBox" class="sub" style="display:none;">
           <div class="field"><label for="newCount">Inscrits supplémentaires</label><input type="number" class="wide" id="newCount" min="0" step="1000"></div>
           <p class="hint" style="margin:0 0 6px;">Par défaut : électeurs français uniquement, soit 49 813 412 inscrits au 11 février 2026 (Insee, listes communales et consulaires, hors Nouvelle-Calédonie) contre 48 747 876 au 1<sup>er</sup> tour 2022, soit environ 1,07 million de plus. Les électeurs européens, qui ne votent pas à la présidentielle, ne sont pas comptés.</p>
-          <div class="field"><label for="newAbst">Abstention de ces inscrits <span class="hint">(%)</span></label><input type="number" id="newAbst" min="0" max="100" step="0.1"></div>
-          <div class="field"><label for="newBlancs">Blancs et nuls de ces inscrits <span class="hint">(% des votants)</span></label><input type="number" id="newBlancs" min="0" max="100" step="0.1"></div>
-          <label class="switch" style="font-weight:400;"><input type="checkbox" id="newSpecific"> Répartir leurs voix autrement que le reste de l'électorat</label>
-          <p class="hint" id="newSameHint" style="margin:4px 0 0;">Sinon, ils votent comme les autres électeurs (mêmes scores).</p>
+          <label class="switch" style="font-weight:400;"><input type="checkbox" id="newSpecific"> Leur donner des scores différents du reste de l'électorat</label>
+          <p class="hint" style="margin:4px 0 0;">Une colonne « Nouveaux inscrits » apparaît dans le tableau des scores : leur abstention et leurs votes blancs et nuls s'y règlent toujours ; leurs scores aussi si la case est cochée (sinon, ils votent comme les autres).</p>
         </div>
       </div>
     </div>
@@ -137,7 +164,7 @@
             <button type="button" id="clearScoresBtn">Remettre à zéro</button>
           </span>
         </div>
-        <p class="hint" style="margin:10px 0 0;">Colonne 2022 : score du candidat au 1<sup>er</sup> tour 2022, ou, entre crochets, celui de sa famille politique s'il ne s'était pas présenté. Si le total ne fait pas 100 %, les scores sont ramenés proportionnellement à 100 % pour le calcul.</p>
+        <p class="hint" style="margin:10px 0 0;">Colonne 2022 : score du candidat au 1<sup>er</sup> tour 2022, ou, entre crochets, celui de sa famille politique s'il ne s'était pas présenté. Si le total ne fait pas 100 %, chaque score est multiplié par le même coefficient (100 ÷ total) : par exemple, avec un total de 101 %, un candidat à 20 % compte pour 20 × 100 ÷ 101 = 19,8 %. Les écarts entre candidats sont conservés.</p>
       </div>
 
       <div class="card">
@@ -154,19 +181,19 @@
 
   <!-- ============ 2. SECOND TOUR ============ -->
   <div class="step-title"><span class="num">2</span><h2>Second tour</h2><p>Pour chaque électorat du 1<sup>er</sup> tour, indiquez où vont ses voix.</p></div>
-  <div class="grid">
-    <div>
+  <div class="duo">
       <div class="card">
         <h3>Mode d'emploi</h3>
-        <p class="hint" style="margin:0 0 8px;">Chaque ligne correspond aux électeurs d'un candidat (ou aux blancs/nuls, ou aux abstentionnistes) du 1<sup>er</sup> tour. Indiquez la part qui vote pour chaque qualifié et la part qui vote blanc ou nul ; le reste s'abstient.</p>
-        <p class="hint" style="margin:0 0 8px;">Boutons rapides : <strong>½</strong> partage à égalité entre les deux qualifiés la part qui vote pour l'un d'eux ; <strong>0</strong> remet la ligne à zéro (tout en abstention).</p>
+        <p class="hint" style="margin:0 0 8px;">Chaque ligne correspond aux électeurs d'un candidat (ou aux blancs/nuls, ou aux abstentionnistes) du 1<sup>er</sup> tour. Indiquez, en %, la part qui vote pour chaque qualifié et qui vote blanc ou nul : l'abstention s'ajuste d'elle-même pour que la ligne fasse 100 %, et vous pouvez aussi la saisir directement. Si une ligne ne fait pas 100 %, ses parts sont ramenées proportionnellement à 100 % (multipliées par 100 ÷ total).</p>
+        <p class="hint" style="margin:0 0 8px;">Les colonnes « 2022 » et « 1<sup>er</sup> tour » rappellent le poids de chaque électorat. Boutons rapides : <strong>½</strong> partage à égalité entre les deux qualifiés ce qui ne va ni au blanc ni à l'abstention ; <strong>0</strong> met toute la ligne en abstention.</p>
         <button type="button" id="resetReportsBtn">Réinitialiser les reports</button>
       </div>
       <div class="card">
         <h3>Référence 2022</h3>
         <p class="hint" style="margin:0;">Second tour 2022 : Emmanuel Macron 58,55 %, Marine Le Pen 41,45 % des exprimés ; abstention 28,01 % ; blancs 6,35 % et nuls 2,29 % des votants.</p>
       </div>
-    </div>
+  </div>
+  <div>
     <div>
       <div class="card">
         <h3>Reports de voix</h3>
@@ -184,6 +211,7 @@
   </div>
   <footer>Tout le calcul se fait dans votre navigateur — aucune donnée n'est envoyée sur un serveur.</footer>
 </div>
+<div id="printView"></div>
 
 <script>
 // ---------------------------------------------------------------------------
@@ -237,14 +265,22 @@ function defaultState() {
   return {
     pollKey: "", selected: [], scores: {},
     abst: DEFAULT_PARTICIPATION.abst, blancs: DEFAULT_PARTICIPATION.blancs, nuls: DEFAULT_PARTICIPATION.nuls,
-    newOn: false, newCount: NEW_INSCRITS_DEFAULT, newAbst: DEFAULT_PARTICIPATION.abst, newBlancs: DEFAULT_PARTICIPATION.blancs + DEFAULT_PARTICIPATION.nuls,
+    newOn: false, newCount: NEW_INSCRITS_DEFAULT, newAbst: DEFAULT_PARTICIPATION.abst, newBlancs: DEFAULT_PARTICIPATION.blancs, newNuls: DEFAULT_PARTICIPATION.nuls,
     newSpecific: false, newScores: {},
     finA: "", finB: "", reports: {},
   };
 }
 function save() { try { localStorage.setItem(STORE_KEY, JSON.stringify(S)); } catch (e) {} }
 function load() {
-  try { const s = JSON.parse(localStorage.getItem(STORE_KEY) || "null"); if (s && typeof s === "object") return Object.assign(defaultState(), s); } catch (e) {}
+  try {
+    const s = JSON.parse(localStorage.getItem(STORE_KEY) || "null");
+    if (s && typeof s === "object") {
+      if (s.newNuls === undefined && s.newBlancs !== undefined) { // ancienne version : blancs et nuls réunis
+        const tot = num(s.newBlancs), d = DEFAULT_PARTICIPATION; s.newBlancs = Math.round(tot * d.blancs / (d.blancs + d.nuls) * 100) / 100; s.newNuls = Math.round((tot - s.newBlancs) * 100) / 100;
+      }
+      return Object.assign(defaultState(), s);
+    }
+  } catch (e) {}
   return null;
 }
 
@@ -313,20 +349,28 @@ function orderedSelected() {
 // ---------------------------------------------------------------------------
 function renderScores() {
   const names = orderedSelected();
-  const spec = S.newOn && S.newSpecific;
-  $("scoreTable").innerHTML = `<thead><tr><th>Candidat</th><th class="num">2022</th><th class="num">Score</th>${spec ? '<th class="num">Nouveaux inscrits</th>' : ""}</tr></thead><tbody>` +
+  const nw = S.newOn, spec = S.newOn && S.newSpecific;
+  const inp = (attr, key, val, step = 0.5) => `<input type="number" min="0" max="100" step="${step}" ${attr}="${esc(key)}" value="${val ?? ""}" placeholder="0">`;
+  const cols = nw ? 4 : 3;
+  $("scoreTable").innerHTML = `<thead><tr><th>Candidat</th><th class="num">2022</th><th class="num">${nw ? "Électorat 2022" : "Score"}</th>${nw ? '<th class="num">Nouveaux inscrits</th>' : ""}</tr></thead><tbody>` +
     (names.length ? names.map(n => {
       const r = ref2022(n), c = candInfo(n);
       return `<tr><td><span class="dot" style="background:${BLOC_COLOR[c.bloc] || BLOC_COLOR.DIVERS}; margin-right:6px;"></span>${esc(n)}</td>
         <td class="num ref"${r.title ? ` title="${esc(r.title)}"` : ""}>${r.fam ? `<em>${esc(r.txt)}</em>` : esc(r.txt)}</td>
-        <td class="num"><input type="number" min="0" max="100" step="0.5" data-score="${esc(n)}" value="${S.scores[n] ?? ""}" placeholder="0"></td>
-        ${spec ? `<td class="num"><input type="number" min="0" max="100" step="0.5" data-newscore="${esc(n)}" value="${S.newScores[n] ?? ""}" placeholder="0"></td>` : ""}</tr>`;
-    }).join("") : `<tr><td colspan="4" class="hint">Cochez des candidats à gauche, ou partez d'un sondage.</td></tr>`) + "</tbody>";
-  $("scoreTable").querySelectorAll("input[data-score]").forEach(inp => inp.addEventListener("input", () => {
-    S.scores[inp.getAttribute("data-score")] = inp.value === "" ? null : num(inp.value); save(); compute();
+        <td class="num">${inp("data-score", n, S.scores[n])}</td>
+        ${nw ? `<td class="num">${spec ? inp("data-newscore", n, S.newScores[n]) : '<span class="hint">comme les autres</span>'}</td>` : ""}</tr>`;
+    }).join("") : `<tr><td colspan="${cols}" class="hint">Cochez des candidats à gauche, ou partez d'un sondage.</td></tr>`) +
+    `<tr class="sep"><td colspan="2">Votes blancs <span class="hint">(% des votants)</span></td><td class="num">${inp("data-part", "blancs", S.blancs, 0.1)}</td>${nw ? `<td class="num">${inp("data-part", "newBlancs", S.newBlancs, 0.1)}</td>` : ""}</tr>
+     <tr><td colspan="2">Votes nuls <span class="hint">(% des votants)</span></td><td class="num">${inp("data-part", "nuls", S.nuls, 0.1)}</td>${nw ? `<td class="num">${inp("data-part", "newNuls", S.newNuls, 0.1)}</td>` : ""}</tr>
+     <tr><td colspan="2">Abstention <span class="hint">(% des inscrits)</span></td><td class="num">${inp("data-part", "abst", S.abst, 0.1)}</td>${nw ? `<td class="num">${inp("data-part", "newAbst", S.newAbst, 0.1)}</td>` : ""}</tr></tbody>`;
+  $("scoreTable").querySelectorAll("input[data-score]").forEach(el => el.addEventListener("input", () => {
+    S.scores[el.getAttribute("data-score")] = el.value === "" ? null : num(el.value); save(); compute();
   }));
-  $("scoreTable").querySelectorAll("input[data-newscore]").forEach(inp => inp.addEventListener("input", () => {
-    S.newScores[inp.getAttribute("data-newscore")] = inp.value === "" ? null : num(inp.value); save(); compute();
+  $("scoreTable").querySelectorAll("input[data-newscore]").forEach(el => el.addEventListener("input", () => {
+    S.newScores[el.getAttribute("data-newscore")] = el.value === "" ? null : num(el.value); save(); compute();
+  }));
+  $("scoreTable").querySelectorAll("input[data-part]").forEach(el => el.addEventListener("input", () => {
+    S[el.getAttribute("data-part")] = num(el.value); save(); compute();
   }));
 }
 
@@ -350,11 +394,9 @@ function round1() {
   if (S.newOn) {
     const N = Math.max(0, num(S.newCount));
     const nv = N * (1 - clamp(num(S.newAbst), 0, 100) / 100);
-    const nbn = nv * clamp(num(S.newBlancs), 0, 100) / 100;
-    const ne = Math.max(0, nv - nbn);
-    // blancs et nuls des nouveaux inscrits : répartis entre blancs et nuls au prorata du reste de l'électorat
-    const ratioB = bl + nu > 0 ? bl / (bl + nu) : 0.5;
-    inscrits += N; votants += nv; blancs += nbn * ratioB; nuls += nbn * (1 - ratioB); expr += ne;
+    const nb = nv * clamp(num(S.newBlancs), 0, 100) / 100, nn = nv * clamp(num(S.newNuls), 0, 100) / 100;
+    const ne = Math.max(0, nv - nb - nn);
+    inscrits += N; votants += nv; blancs += nb; nuls += nn; expr += ne;
     newSh = S.newSpecific ? shares(names, S.newScores) : base;
     names.forEach(n => { voix[n] += ne * newSh.sh[n]; });
   }
@@ -408,16 +450,19 @@ function finalists(r) {
 // Second tour
 // ---------------------------------------------------------------------------
 function repDefault(key, A, B) {
-  if (key === "c:" + A) return { a: 100, b: 0, bn: 0 };
-  if (key === "c:" + B) return { a: 0, b: 100, bn: 0 };
-  if (key === "blancs") return { a: 0, b: 0, bn: 100 };
-  return { a: 0, b: 0, bn: 0 };
+  if (key === "c:" + A) return { a: 100, b: 0, bn: 0, ab: 0 };
+  if (key === "c:" + B) return { a: 0, b: 100, bn: 0, ab: 0 };
+  if (key === "blancs") return { a: 0, b: 0, bn: 100, ab: 0 };
+  return { a: 0, b: 0, bn: 0, ab: 100 };
 }
 function repOf(key, A, B) {
   const pairKey = A + "|" + B;
   const all = S.reports[pairKey] || (S.reports[pairKey] = {});
-  return all[key] || repDefault(key, A, B);
+  const v = all[key] || repDefault(key, A, B);
+  if (v.ab === undefined) v.ab = Math.max(0, 100 - v.a - v.b - v.bn); // ancienne version : abstention = reste
+  return v;
 }
+const repSum = rp => rp.a + rp.b + rp.bn + rp.ab;
 function setRep(key, A, B, v) { const pk = A + "|" + B; (S.reports[pk] || (S.reports[pk] = {}))[key] = v; save(); }
 
 function round2(r) {
@@ -427,14 +472,16 @@ function round2(r) {
   [A, B, ...r.ranked.filter(n => n !== A && n !== B)].forEach(n => rows.push({ key: "c:" + n, label: n, voix: r.voix[n], cand: n }));
   rows.push({ key: "blancs", label: "Blancs et nuls du 1er tour", voix: r.blancs + r.nuls });
   rows.push({ key: "abst", label: "Abstentionnistes du 1er tour", voix: r.abstVoix });
+  rows.forEach(row => { row.pctR1 = row.cand ? (r.expr ? 100 * row.voix / r.expr : 0) : (r.inscrits ? 100 * row.voix / r.inscrits : 0); });
   let va = 0, vb = 0, vbn = 0;
   rows.forEach(row => {
     const rp = repOf(row.key, A, B);
     row.rp = rp;
-    const sum = rp.a + rp.b + rp.bn;
-    const k = sum > 100 ? 100 / sum : 1; // si > 100 %, on ramène à 100 % pour le calcul
+    const sum = repSum(rp);
+    // si la ligne ne fait pas 100 %, chaque part est multipliée par 100 ÷ total (ligne vide = abstention)
+    const k = sum > 0 ? 100 / sum : 0;
     va += row.voix * rp.a / 100 * k; vb += row.voix * rp.b / 100 * k; vbn += row.voix * rp.bn / 100 * k;
-    row.over = sum > 100.0001;
+    row.off = Math.abs(sum - 100) > 0.05;
   });
   const votants = va + vb + vbn, expr = va + vb;
   return { A, B, rows, va, vb, vbn, votants, expr, inscrits: r.inscrits, abst: r.inscrits - votants };
@@ -449,38 +496,45 @@ function renderRound2(r) {
     return;
   }
   const { A, B } = t;
-  $("repTable").innerHTML = `<thead><tr><th>Électorat du 1<sup>er</sup> tour</th><th class="num">Voix</th>
+  const totCell = rp => { const t = repSum(rp), ok = Math.abs(t - 100) <= 0.05; return `<span class="pill ${ok ? "ok" : "warn"}" title="${ok ? "" : "La ligne sera ramenée à 100 % proportionnellement"}">${fmtPct(t, 0)}</span>`; };
+  const ri = (key, f, v) => `<input type="number" min="0" max="100" step="1" data-rk="${esc(key)}" data-f="${f}" value="${v}">`;
+  $("repTable").innerHTML = `<thead><tr><th>Électorat du 1<sup>er</sup> tour</th><th class="num">2022</th><th class="num">1<sup>er</sup> tour</th><th class="num">Voix</th>
       <th class="num" style="color:var(--a)">→ ${esc(A)}</th><th class="num" style="color:var(--b)">→ ${esc(B)}</th>
-      <th class="num">→ Blanc / nul</th><th class="num">→ Abstention</th><th></th></tr></thead><tbody>` +
+      <th class="num">→ Blanc / nul</th><th class="num">→ Abstention</th><th class="num">Total</th><th></th></tr></thead><tbody>` +
     t.rows.map((row, i) => {
-      const rest = 100 - row.rp.a - row.rp.b - row.rp.bn;
+      const r22 = row.cand ? ref2022(row.cand) : null;
+      const refCell = r22 ? `<span class="ref22${r22.fam ? " fam" : ""}"${r22.title ? ` title="${esc(r22.title)}"` : ""}>${esc(r22.txt)}</span>` : '<span class="hint">—</span>';
       return `<tr class="${i === 2 || row.key === "blancs" ? "sep" : ""}"><td>${esc(row.label)}${row.cand === A || row.cand === B ? ' <span class="hint">(qualifié)</span>' : ""}</td>
+        <td class="num">${refCell}</td>
+        <td class="num">${fmtPct(row.pctR1, 1)}${row.cand ? "" : '<span class="hint"> insc.</span>'}</td>
         <td class="num">${fmtInt(row.voix)}</td>
-        <td class="num"><input type="number" min="0" max="100" step="1" data-rk="${esc(row.key)}" data-f="a" value="${row.rp.a}"></td>
-        <td class="num"><input type="number" min="0" max="100" step="1" data-rk="${esc(row.key)}" data-f="b" value="${row.rp.b}"></td>
-        <td class="num"><input type="number" min="0" max="100" step="1" data-rk="${esc(row.key)}" data-f="bn" value="${row.rp.bn}"></td>
-        <td class="num ${rest < -0.0001 ? "bad" : "rest"}" data-rest="${esc(row.key)}">${rest < -0.0001 ? "total > 100 %" : fmtPct(rest, 0)}</td>
-        <td class="rowbtns"><button type="button" class="mini" data-half="${esc(row.key)}" title="Partager à égalité entre ${esc(A)} et ${esc(B)}">½</button>
-          <button type="button" class="mini" data-zero="${esc(row.key)}" title="Remettre à zéro">0</button></td></tr>`;
+        <td class="num">${ri(row.key, "a", row.rp.a)}</td><td class="num">${ri(row.key, "b", row.rp.b)}</td>
+        <td class="num">${ri(row.key, "bn", row.rp.bn)}</td><td class="num">${ri(row.key, "ab", row.rp.ab)}</td>
+        <td class="num" data-tot="${esc(row.key)}">${totCell(row.rp)}</td>
+        <td class="rowbtns"><button type="button" class="mini" data-half="${esc(row.key)}" title="Partager à égalité entre ${esc(A)} et ${esc(B)} ce qui ne va ni au blanc ni à l'abstention">½</button>
+          <button type="button" class="mini" data-zero="${esc(row.key)}" title="Tout en abstention">0</button></td></tr>`;
     }).join("") + "</tbody>";
 
   $("repTable").querySelectorAll("input[data-rk]").forEach(inp => inp.addEventListener("input", () => {
     const key = inp.getAttribute("data-rk"), f = inp.getAttribute("data-f");
     const cur = Object.assign({}, repOf(key, A, B)); cur[f] = clamp(num(inp.value), 0, 100);
+    if (f !== "ab") { // l'abstention s'ajuste d'elle-même pour que la ligne fasse 100 %
+      cur.ab = Math.max(0, Math.round((100 - cur.a - cur.b - cur.bn) * 10) / 10);
+      const abInp = $("repTable").querySelector(`input[data-rk="${CSS.escape(key)}"][data-f="ab"]`);
+      if (abInp) abInp.value = cur.ab;
+    }
     setRep(key, A, B, cur);
-    const rest = 100 - cur.a - cur.b - cur.bn, cell = $("repTable").querySelector(`[data-rest="${CSS.escape(key)}"]`);
-    cell.className = "num " + (rest < -0.0001 ? "bad" : "rest"); cell.textContent = rest < -0.0001 ? "total > 100 %" : fmtPct(rest, 0);
+    $("repTable").querySelector(`[data-tot="${CSS.escape(key)}"]`).innerHTML = totCell(cur);
     renderRound2Result(round2(round1()));
   }));
   $("repTable").querySelectorAll("[data-half]").forEach(btn => btn.addEventListener("click", () => {
     const key = btn.getAttribute("data-half"), cur = repOf(key, A, B);
-    // partage à égalité la part qui vote pour un qualifié (ou tout ce qui ne vote pas blanc si la ligne est vide)
-    const share = (cur.a + cur.b) > 0 ? (cur.a + cur.b) / 2 : (100 - cur.bn) / 2;
-    setRep(key, A, B, { a: Math.round(share * 10) / 10, b: Math.round(share * 10) / 10, bn: cur.bn });
+    const share = Math.max(0, 100 - cur.bn - cur.ab) / 2;
+    setRep(key, A, B, { a: Math.round(share * 10) / 10, b: Math.round(share * 10) / 10, bn: cur.bn, ab: cur.ab });
     renderRound2(round1());
   }));
   $("repTable").querySelectorAll("[data-zero]").forEach(btn => btn.addEventListener("click", () => {
-    setRep(btn.getAttribute("data-zero"), A, B, { a: 0, b: 0, bn: 0 }); renderRound2(round1());
+    setRep(btn.getAttribute("data-zero"), A, B, { a: 0, b: 0, bn: 0, ab: 100 }); renderRound2(round1());
   }));
   renderRound2Result(t);
 }
@@ -504,19 +558,70 @@ function renderRound2Result(t) {
 }
 
 // ---------------------------------------------------------------------------
+// Fiche imprimable (une page A4) : tous les choix et la conclusion
+// ---------------------------------------------------------------------------
+function printSummary() {
+  const r = round1(), t = round2(r);
+  const today = new Date(), dstr = `${today.getDate()} ${MONTHS[today.getMonth()]} ${today.getFullYear()}`;
+  const poll = S.pollKey !== "" && dataset.polls[+S.pollKey] ? recentPolls().find(x => String(x.i) === String(S.pollKey)) : null;
+  const start = poll ? `sondage ${esc(pollLabel(poll).split(" · ").slice(0, 2).join(", "))}${poll.p.hypothese ? " — " + esc((/^(Hypothèse\s*\d+)/.exec(poll.p.hypothese) || [poll.p.hypothese])[0]) : ""}` : "saisie libre";
+  const edited = poll ? r.names.some(n => num(S.scores[n]) !== num(poll.p.scores[n])) || r.names.length !== Object.values(poll.p.scores).filter(v => v !== null && v !== undefined).length : false;
+  const nw = S.newOn;
+  const choices = [
+    ["Point de départ", start + (poll ? (edited ? " (scores modifiés)" : " (scores du sondage)") : "")],
+    ["Électorat 2022", `${fmtInt(INSCRITS_2022)} inscrits — abstention ${fmtPct(num(S.abst), 2)}, blancs ${fmtPct(num(S.blancs), 2)}, nuls ${fmtPct(num(S.nuls), 2)} des votants`],
+    ["Nouveaux inscrits", nw ? `${fmtInt(num(S.newCount))} — abstention ${fmtPct(num(S.newAbst), 2)}, blancs ${fmtPct(num(S.newBlancs), 2)}, nuls ${fmtPct(num(S.newNuls), 2)} ; ${S.newSpecific ? "scores spécifiques" : "votent comme les autres"}` : "non pris en compte"],
+    ["Qualifiés", t ? `${esc(t.A)} et ${esc(t.B)}${!S.finA && !S.finB ? " (deux premiers)" : " (choisis manuellement)"}` : "—"],
+  ];
+  if (Math.abs(r.baseTot - 100) > 0.05) choices.push(["Total saisi", `${fmtPct(r.baseTot, 1)}, ramené proportionnellement à 100 %`]);
+  const rows = t ? t.rows : [];
+  const pc = (row, f) => { const s = repSum(row.rp); return s > 0 ? fmtPct(100 * row.rp[f] / s, 0) : (f === "ab" ? "100 %" : "0 %"); };
+  const pa = t && t.expr ? 100 * t.va / t.expr : 0, pb = t && t.expr ? 100 * t.vb / t.expr : 0;
+  const winner = t && t.expr ? (pa >= pb ? t.A : t.B) : "";
+  $("printView").innerHTML = `
+    <h1>Simulation présidentielle 2027 — reports de voix</h1>
+    <p class="pv-sub">Simulation réalisée le ${dstr} avec le simulateur de reports de voix (Fondapol, sondages 2027). Hypothèses de travail, pas une prévision.</p>
+    <div class="pv-choices">${choices.map(([k, v]) => `<div><b>${k} :</b> ${v}</div>`).join("")}</div>
+    <div class="pv-h2">Premier tour et reports vers le second tour</div>
+    <table><thead><tr><th style="text-align:left">Électorat du 1<sup>er</sup> tour</th><th class="num">2022</th><th class="num">Score saisi</th>${nw && S.newSpecific ? '<th class="num">Nouv. inscrits</th>' : ""}
+      <th class="num">Résultat 1<sup>er</sup> t.</th><th class="num">Voix</th><th class="num">→ ${esc(t ? t.A : "A")}</th><th class="num">→ ${esc(t ? t.B : "B")}</th><th class="num">→ Blanc/nul</th><th class="num">→ Abst.</th></tr></thead><tbody>
+      ${rows.map((row, i) => {
+        const r22 = row.cand ? ref2022(row.cand).txt : "—";
+        const saisi = row.cand ? fmtPct(num(S.scores[row.cand]), 1) : row.key === "blancs" ? `${fmtPct(num(S.blancs) + num(S.nuls), 2)} vot.` : `${fmtPct(num(S.abst), 2)} insc.`;
+        return `<tr class="${row.cand && (row.cand === t.A || row.cand === t.B) ? "q" : ""} ${i === 2 || row.key === "blancs" ? "sep" : ""}"><td>${esc(row.label)}</td><td class="num">${esc(r22)}</td><td class="num">${saisi}</td>
+          ${nw && S.newSpecific ? `<td class="num">${row.cand ? fmtPct(num(S.newScores[row.cand]), 1) : "—"}</td>` : ""}
+          <td class="num">${fmtPct(row.pctR1, 2)}${row.cand ? "" : " insc."}</td><td class="num">${fmtInt(row.voix)}</td>
+          <td class="num">${pc(row, "a")}</td><td class="num">${pc(row, "b")}</td><td class="num">${pc(row, "bn")}</td><td class="num">${pc(row, "ab")}</td></tr>`;
+      }).join("")}
+    </tbody></table>
+    <p class="pv-foot" style="margin-top:3px;">1<sup>er</sup> tour : ${fmtInt(r.inscrits)} inscrits, participation ${fmtPct(r.inscrits ? 100 * r.votants / r.inscrits : 0, 2)}, ${fmtInt(r.expr)} exprimés. Colonne 2022 : score du candidat en 2022, ou [famille politique : score de son candidat en 2022].</p>
+    <div class="pv-concl">
+      <div class="pv-h2" style="margin-top:0">Conclusion — second tour</div>
+      ${t && t.expr ? `<div class="pv-big">${esc(winner)} l'emporte avec ${fmtPct(Math.max(pa, pb), 1)} des suffrages exprimés.</div>
+      <div class="pv-duel"><div style="background:#2b5fd9; width:${pa}%">${esc(t.A)} ${fmtPct(pa, 1)}</div><div style="background:#c2410c; width:${pb}%; justify-content:flex-end">${fmtPct(pb, 1)} ${esc(t.B)}</div></div>
+      <div>${esc(t.A)} : ${fmtInt(t.va)} voix · ${esc(t.B)} : ${fmtInt(t.vb)} voix · écart : ${fmtInt(Math.abs(t.va - t.vb))} voix<br>
+      Participation ${fmtPct(t.inscrits ? 100 * t.votants / t.inscrits : 0, 1)} · abstention ${fmtPct(t.inscrits ? 100 * t.abst / t.inscrits : 0, 1)} · blancs et nuls ${fmtPct(t.votants ? 100 * t.vbn / t.votants : 0, 1)} des votants</div>`
+      : "<div>Aucun suffrage exprimé au second tour avec ces reports.</div>"}
+      <div class="pv-foot">Pour mémoire, second tour 2022 : Macron 58,55 %, Le Pen 41,45 % ; abstention 28,01 %.</div>
+    </div>
+    <p class="pv-foot">Sources : résultats officiels de la présidentielle 2022 (ministère de l'Intérieur) ; inscrits au 11 février 2026 (Insee) ; sondages : données du simulateur de moyennes. Une ligne de reports qui ne fait pas 100 % est ramenée proportionnellement à 100 %.</p>`;
+  try { window.print(); } catch (e) {}
+}
+
+// ---------------------------------------------------------------------------
 function compute() { const r = round1(); renderRound1(r); renderRound2(r); }
 function renderParticipation() {
   $("inscrits2022").textContent = fmtInt(INSCRITS_2022);
-  ["abst", "blancs", "nuls", "newCount", "newAbst", "newBlancs"].forEach(k => { $(k).value = S[k]; });
+  $("newCount").value = S.newCount;
   $("newOn").checked = S.newOn; $("newSpecific").checked = S.newSpecific;
   $("newBox").style.display = S.newOn ? "" : "none";
-  $("newSameHint").style.display = S.newSpecific ? "none" : "";
 }
 function renderAll() { renderPollSelect(); renderCandList(); renderParticipation(); renderScores(); compute(); }
 
 function bind() {
   $("pollSelect").addEventListener("change", e => applyPoll(e.target.value));
-  ["abst", "blancs", "nuls", "newCount", "newAbst", "newBlancs"].forEach(k => $(k).addEventListener("input", e => { S[k] = num(e.target.value); save(); compute(); }));
+  $("newCount").addEventListener("input", e => { S.newCount = num(e.target.value); save(); compute(); });
+  $("printBtn").addEventListener("click", printSummary);
   $("newOn").addEventListener("change", e => { S.newOn = e.target.checked; save(); renderParticipation(); renderScores(); compute(); });
   $("newSpecific").addEventListener("change", e => {
     S.newSpecific = e.target.checked;
